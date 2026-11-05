@@ -132,15 +132,17 @@
   const DB = 'stock-game';
   const STORE = 'recent';
   const RECORDS = 'records';
+  const COLLECTION = 'collection';
   const KEEP = 8;
 
   function db() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB, 2);
+      const req = indexedDB.open(DB, 3);
       req.onupgradeneeded = () => {
         const names = req.result.objectStoreNames;
         if (!names.contains(STORE)) req.result.createObjectStore(STORE, { keyPath: 'name' });
         if (!names.contains(RECORDS)) req.result.createObjectStore(RECORDS, { keyPath: 'id' });
+        if (!names.contains(COLLECTION)) req.result.createObjectStore(COLLECTION, { keyPath: 'id' });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -191,6 +193,21 @@
     return name;
   }
 
+  // ---------- 트로피와 메달 ----------
+
+  async function loadAchievements() {
+    const conn = await db();
+    const row = await tx(conn, 'readonly', (s) => s.get('me'), COLLECTION);
+    conn.close();
+    return row ? row.value : null;
+  }
+
+  async function saveAchievements(value) {
+    const conn = await db();
+    await tx(conn, 'readwrite', (s) => s.put({ id: 'me', value }), COLLECTION);
+    conn.close();
+  }
+
   // ---------- 투자 보고서 기록 ----------
 
   async function listRecords() {
@@ -226,7 +243,7 @@
   }
 
   const Saves = {
-    serialize, parse, summary, canPickFiles, downloadFile, saveToFile, saveToBrowser, deleteRecent, listRecords, putRecord, deleteRecord, openFile, recent, remember, readRecent,
+    serialize, parse, summary, canPickFiles, downloadFile, saveToFile, saveToBrowser, deleteRecent, loadAchievements, saveAchievements, listRecords, putRecord, deleteRecord, openFile, recent, remember, readRecent,
   };
   globalThis.Saves = Saves;
   if (typeof module !== 'undefined') module.exports = Saves;

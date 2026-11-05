@@ -151,7 +151,21 @@
     return scale.L + (idx - scale.fromIdx) / scale.span * (scale.W - scale.L - scale.R);
   }
 
-  const Chart = { niceTicks, yearTicks, timeTicks, linePath, render, idxAt, xOf };
+  // 자동투자 표시가 많으면 달력 칸 수에 맞춰 솎는다. 같은 칸이나 가까운 칸은 하나만 남긴다.
+  function thinAutos(marks, fromIdx, toIdx, maxMarks = 400) {
+    const step = Math.max(1, Math.ceil((toIdx - fromIdx + 1) / maxMarks));
+    const out = [];
+    let last = -Infinity;
+    for (const m of marks) {
+      if (m.idx - last >= step) {
+        out.push(m);
+        last = m.idx;
+      }
+    }
+    return out;
+  }
+
+  const Chart = { thinAutos, niceTicks, yearTicks, timeTicks, linePath, render, idxAt, xOf };
   globalThis.Chart = Chart;
   if (typeof module !== 'undefined') module.exports = Chart;
 })();

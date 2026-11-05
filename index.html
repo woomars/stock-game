@@ -29,6 +29,7 @@
       <div id="recent"></div>
       <button class="go" id="loadFile" type="button">세이브 파일 불러오기</button>
       <button class="go" id="historyStart" type="button">투자 기록 비교</button>
+      <button class="go" id="trophyStart" type="button">트로피와 메달</button>
       <p class="msg" id="loadMsg"></p>
     </div>
   </div>
@@ -47,6 +48,7 @@
     <button class="btn" id="newStart" type="button" title="설정 화면으로 돌아갑니다">새로 시작</button>
     <button class="btn" id="reportBtn" type="button" hidden>보고서</button>
     <button class="btn" id="historyBtn" type="button" title="끝낸 게임의 투자 보고서를 비교합니다">기록</button>
+    <button class="btn" id="trophyBtn" type="button" title="모은 트로피와 메달을 봅니다">트로피</button>
     <span class="stats">
       <span class="stat"><small>총자산</small><b id="tTotal"></b></span>
       <span class="stat"><small>손익</small><b id="tPnl"></b></span>
@@ -182,6 +184,20 @@
   <div class="log" id="log"></div>
 </div>
 
+<div id="trophyRoom" hidden>
+  <div class="roomHead">
+    <button class="btn" id="roomBack" type="button">← 돌아가기</button>
+    <h2>트로피와 메달</h2>
+    <span class="roomTotal" id="roomTotal"></span>
+  </div>
+  <div class="tabs" id="roomTabs">
+    <button type="button" class="on" data-k="trophy"></button><button type="button" data-k="medal"></button>
+  </div>
+  <div id="roomBody"></div>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
 <div class="dialog" id="records" hidden>
   <div>
     <h3>투자 기록</h3>
@@ -223,6 +239,7 @@
 <script src="js/format.js"></script>
 <script src="js/saves.js"></script>
 <script src="js/records.js"></script>
+<script src="js/achievements.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/tabs.js"></script>

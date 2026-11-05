@@ -86,9 +86,11 @@
     const key = cashKey(s.currency);
     if (cost > state[key]) return fail('잔액 부족');
     state[key] = roundMoney(state[key] - cost, s.currency);
+    const held = state.holdings[stockIdx];
+    const avg = held ? { avg: held.avgCost } : {};
     addShares(state, stockIdx, qty, price);
     pushEvent(state, {
-      type: 'buy', stockIdx, qty, price, amount: cost,
+      type: 'buy', ...avg, stockIdx, qty, price, amount: cost,
       feeKrw: roundMoney(toKrw(data, state.dayIdx, fee, s.currency), 'KRW'),
     });
     syncHistory(data, state);
@@ -131,9 +133,10 @@
     const key = cashKey(s.currency);
     state[key] = roundMoney(state[key] + amount, s.currency);
     h.qty = roundQty(h.qty - n);
-    if (h.qty <= 0) delete state.holdings[stockIdx];
+    const closed = h.qty <= 0;
+    if (closed) delete state.holdings[stockIdx];
     pushEvent(state, {
-      ...event, stockIdx, qty: n, price, amount,
+      ...event, ...(closed ? { closed: true } : {}), avg: h.avgCost, stockIdx, qty: n, price, amount,
       feeKrw: roundMoney(toKrw(data, state.dayIdx, fee, s.currency), 'KRW'),
     });
   }
@@ -556,7 +559,7 @@
     state[key] = roundMoney(state[key] - cost, s.currency);
     addShares(state, rule.stockIdx, qty, price);
     pushEvent(state, {
-      type: 'auto_buy', stockIdx: rule.stockIdx, qty, price, amount: cost, ruleId: rule.id,
+      type: 'auto_buy', stockIdx: rule.stockIdx, qty, price, amount: cost, ruleId: rule.id, freq: rule.freq,
       feeKrw: roundMoney(toKrw(data, state.dayIdx, fee, s.currency), 'KRW'),
     });
   }

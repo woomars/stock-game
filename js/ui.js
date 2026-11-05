@@ -55,17 +55,31 @@
 
   // ---------- 그래프 ----------
 
+  // 내 손익 그래프의 표시. 기록이 많아도 매 화면 다시 세지 않도록 새 기록만 더한다.
+  // 값은 손익 이력에서 그때 읽는다. 오늘 칸의 손익은 매매로 바뀔 수 있기 때문이다.
+  let mainMarks = { events: null, cursor: 0, autos: [], manuals: [] };
+
+  function mainMarksNow() {
+    const s = UI.state;
+    if (mainMarks.events !== s.events) mainMarks = { events: s.events, cursor: 0, autos: [], manuals: [] };
+    for (; mainMarks.cursor < s.events.length; mainMarks.cursor += 1) {
+      const e = s.events[mainMarks.cursor];
+      if (e.type === 'auto_buy') mainMarks.autos.push({ idx: e.d, kind: 'auto' });
+      else if (e.type === 'buy') mainMarks.manuals.push({ idx: e.d, kind: 'B' });
+      else if (e.type === 'sell' || e.type === 'rule_sell') mainMarks.manuals.push({ idx: e.d, kind: 'S' });
+    }
+    const valueAt = (m) => ({ ...m, value: s.history.pnl[m.idx - s.startIdx] });
+    return Chart.thinAutos(mainMarks.autos, s.startIdx, s.dayIdx).map(valueAt).concat(mainMarks.manuals.map(valueAt));
+  }
+
   function marksFor(view) {
     const s = UI.state;
+    if (view === null) return mainMarksNow();
     const out = [];
-    let series = null;
-    if (view !== null) series = Engine.adjustedSeries(data, view, s.dayIdx);
+    const series = Engine.adjustedSeries(data, view, s.dayIdx);
     for (const e of s.events) {
       const manual = e.type === 'buy' || e.type === 'sell' || e.type === 'rule_sell';
-      if (view === null) {
-        if (manual) out.push({ idx: e.d, kind: e.type === 'buy' ? 'B' : 'S', value: s.history.pnl[e.d - s.startIdx] });
-        if (e.type === 'auto_buy') out.push({ idx: e.d, kind: 'auto', value: s.history.pnl[e.d - s.startIdx] });
-      } else if (e.stockIdx === view && (manual || e.type === 'auto_buy')) {
+      if (e.stockIdx === view && (manual || e.type === 'auto_buy')) {
         const kind = e.type === 'buy' ? 'B' : e.type === 'auto_buy' ? 'auto' : 'S';
         out.push({ idx: e.d, kind, value: series[e.d] });
       }
@@ -186,7 +200,7 @@
         { values: spLine, color: COLOR.sp, width: 1.5 },
       ],
       marks: marksFor(i).filter((m) => m.idx >= fromIdx),
-      tickOptions: { includeZero: false, minSpan: stock.currency === 'USD' ? 1 : 100 },
+      tickOptions: { includeZero: false, minSpan: series[firstAt] * 0.1 },
       yFormat,
     });
   }
@@ -466,10 +480,182 @@
     logOldest = from;
   }
 
+  // ---------- 트로피와 메달 ----------
+
+  UI.achievements = Achievements.empty();
+  let tracker = Achievements.newTracker();
+  let thisGameTrophies = null; // 이번 판에서 받은 트로피. 끝나기 전에는 null
+  let roomTab = 'trophy';
+  let roomFrom = 'start';
+  const TOAST_MS = 4000;
+  const TOAST_LIMIT = 3;
+  const MEDAL_BY_ID = new Map(Achievements.MEDALS.map((m) => [m.id, m]));
+
+  function persistAchievements() {
+    Saves.saveAchievements(UI.achievements).catch(() => {});
+  }
+
+  function toast(icon, title, text) {
+    const box = $('toasts');
+    const item = document.createElement('div');
+    item.className = 'toast';
+    const ic = document.createElement('span');
+    ic.className = 'ic';
+    ic.textContent = icon;
+    const body = document.createElement('span');
+    const small = document.createElement('small');
+    small.textContent = title;
+    const b = document.createElement('b');
+    b.textContent = text;
+    body.append(small, b);
+    item.append(ic, body);
+    box.append(item);
+    while (box.childElementCount > TOAST_LIMIT + 1) box.firstElementChild.remove();
+    setTimeout(() => item.remove(), TOAST_MS);
+  }
+
+  function announceMedals(ids) {
+    if (ids.length > TOAST_LIMIT) {
+      toast('🏅', '메달 획득', `${ids.length}개를 한꺼번에 받았습니다`);
+      return;
+    }
+    for (const id of ids) {
+      const m = MEDAL_BY_ID.get(id);
+      toast(m.icon, '메달 획득', m.name);
+    }
+  }
+
+  function grantMedals(ids) {
+    if (!ids.length) return;
+    const fresh = Achievements.addMedals(UI.achievements, ids, new Date().toISOString().slice(0, 10));
+    if (!fresh.length) return;
+    persistAchievements();
+    announceMedals(fresh);
+  }
+
+  function checkMedals() {
+    if (UI.state) grantMedals(tracker.update(data, UI.state));
+  }
+
+  // 마지막 날: 트로피와 완주 메달을 준다.
+  function finishGame() {
+    const report = Engine.report(data, UI.state);
+    const earned = Achievements.trophiesFor(report);
+    thisGameTrophies = { ids: earned.map((t) => t.id), eligible: Achievements.isTrophyGame(report) };
+    Achievements.addTrophies(UI.achievements, thisGameTrophies.ids);
+    UI.achievements.finishes += 1;
+    grantMedals(tracker.finish(data, UI.state, UI.achievements.finishes));
+    persistAchievements();
+  }
+
+  function trophySection() {
+    const nodes = [section('이번 판 트로피')];
+    if (!thisGameTrophies.eligible) {
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = '투자 기간이 5년 이상인 판만 트로피를 받습니다.';
+      nodes.push(p);
+      return nodes;
+    }
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    for (const t of Achievements.TROPHIES.filter((x) => thisGameTrophies.ids.includes(x.id))) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = `${t.icon || Achievements.TIER_ICON[t.tier]} ${t.name}`;
+      chip.title = t.desc;
+      chips.append(chip);
+    }
+    nodes.push(chips);
+    return nodes;
+  }
+
+  function roomItem(item, icon, on, tier, count) {
+    const box = document.createElement('div');
+    box.className = `it ${on ? tier : 'off'}`;
+    box.dataset.id = item.id;
+    if (count) {
+      const cnt = document.createElement('span');
+      cnt.className = 'cnt';
+      cnt.textContent = `×${count}`;
+      box.append(cnt);
+    }
+    const ic = document.createElement('span');
+    ic.className = 'ic';
+    ic.textContent = icon;
+    const name = document.createElement('b');
+    name.textContent = item.name;
+    const desc = document.createElement('small');
+    desc.textContent = item.desc;
+    box.append(ic, name, desc);
+    return box;
+  }
+
+  function drawRoom() {
+    const store = UI.achievements;
+    const c = Achievements.counts(store);
+    const total = $('roomTotal');
+    total.textContent = '수집 ';
+    const b = document.createElement('b');
+    b.textContent = c.collected;
+    total.append(b, ` / ${c.total}`);
+    for (const btn of $('roomTabs').children) {
+      btn.classList.toggle('on', btn.dataset.k === roomTab);
+      btn.textContent = btn.dataset.k === 'trophy' ? `트로피 ${c.trophies}/${c.trophyTotal}` : `메달 ${c.medals}/${c.medalTotal}`;
+    }
+    const list = roomTab === 'trophy' ? Achievements.TROPHIES : Achievements.MEDALS;
+    const groups = [...new Set(list.map((x) => x.group))];
+    const body = $('roomBody');
+    body.replaceChildren();
+    for (const group of groups) {
+      const items = list.filter((x) => x.group === group);
+      const head = document.createElement('div');
+      head.className = 'roomSec';
+      const name = document.createElement('span');
+      name.textContent = group;
+      const size = document.createElement('span');
+      size.textContent = `${items.length}종`;
+      head.append(name, size);
+      const grid = document.createElement('div');
+      grid.className = 'roomGrid';
+      for (const it of items) {
+        if (roomTab === 'trophy') {
+          const count = store.trophies[it.id] || 0;
+          grid.append(roomItem(it, it.icon || Achievements.TIER_ICON[it.tier], count > 0, it.tier, count));
+        } else {
+          grid.append(roomItem(it, it.icon, Boolean(store.medals[it.id]), '', 0));
+        }
+      }
+      body.append(head, grid);
+    }
+  }
+
+  function openRoom() {
+    if (UI.playing) UI.pause();
+    roomFrom = $('game').hidden ? 'start' : 'game';
+    $('game').hidden = true;
+    $('start').hidden = true;
+    $('trophyRoom').hidden = false;
+    roomTab = 'trophy';
+    drawRoom();
+    window.scrollTo(0, 0);
+  }
+
+  function closeRoom() {
+    $('trophyRoom').hidden = true;
+    if (roomFrom === 'game') {
+      $('game').hidden = false;
+      UI.refresh();
+    } else {
+      $('start').hidden = false;
+    }
+  }
+
   // ---------- 그리기와 재생 ----------
 
   UI.refresh = function () {
     if (!UI.state) return;
+    checkMedals();
     followHoldings();
     drawTop();
     drawChart();
@@ -501,6 +687,7 @@
     let ended = false;
     while (steps > 0) {
       if (!Engine.advance(data, UI.state)) { ended = true; break; }
+      checkMedals();
       steps -= 1;
     }
     if (now - lastDraw >= FRAME_MS || ended) {
@@ -562,6 +749,8 @@
   UI.loadState = function (state) {
     UI.playing = false;
     UI.state = state;
+    tracker = Achievements.newTracker();
+    thisGameTrophies = null;
     $('exportBtn').hidden = Saves.canPickFiles();
     UI.view = null;
     UI.selected = 0;
@@ -653,6 +842,7 @@
     const withReturns = (pnl, pct, yearly) => [`${Format.krwSigned(pnl)} (${Format.pct(pct)}, ${annual(yearly)})`, UI.signClass(pnl)];
     UI.setText($('summaryPeriod'), `${Format.date(r.startDate)} ~ ${Format.date(r.endDate)}`);
     $('summaryRows').replaceChildren(
+      ...(!saved && thisGameTrophies ? trophySection() : []),
       section('결과'),
       summaryRow('최종 자산', Format.krw(r.total)),
       summaryRow('넣은 돈', Format.krw(r.contributed)),
@@ -685,6 +875,7 @@
 
   // 끝까지 가면 보고서를 띄우고 기록에 남긴다.
   UI.onEnd = async function () {
+    finishGame();
     UI.showReport();
     try {
       const records = await Saves.listRecords();
@@ -1173,6 +1364,15 @@
     $('newStart').addEventListener('click', UI.newStart);
     $('reportBtn').addEventListener('click', () => UI.showReport());
     $('historyBtn').addEventListener('click', openRecords);
+    $('trophyBtn').addEventListener('click', openRoom);
+    $('trophyStart').addEventListener('click', openRoom);
+    $('roomBack').addEventListener('click', closeRoom);
+    $('roomTabs').addEventListener('click', (e) => {
+      if (!e.target.dataset.k) return;
+      roomTab = e.target.dataset.k;
+      drawRoom();
+    });
+    Saves.loadAchievements().then((saved) => { if (saved) UI.achievements = saved; }).catch(() => {});
     $('historyStart').addEventListener('click', openRecords);
     $('recordsClose').addEventListener('click', () => { $('records').hidden = true; });
     $('compareBtn').addEventListener('click', showCompare);
