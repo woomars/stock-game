@@ -187,7 +187,19 @@
     <h3>투자 기록</h3>
     <p class="note">끝까지 진행한 게임의 보고서가 저절로 남습니다. 이 기기의 이 브라우저에만 저장됩니다.</p>
     <div class="reportBody" id="recordsBody"></div>
-    <div class="reportBtns"><button class="go" id="recordsClose" type="button">닫기</button></div>
+    <p class="msg" id="recordsMsg"></p>
+    <div class="reportBtns">
+      <button class="go primary" id="compareBtn" type="button">투자 기록 비교 리포트</button>
+      <button class="go" id="recordsClose" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="dialog" id="compare" hidden>
+  <div>
+    <h3>투자 기록 비교 리포트</h3>
+    <div class="reportBody" id="compareBody"></div>
+    <div class="reportBtns"><button class="go" id="compareClose" type="button">닫기</button></div>
   </div>
 </div>
 

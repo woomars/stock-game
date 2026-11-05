@@ -699,8 +699,12 @@
 
   // ---------- 투자 기록 비교 ----------
 
+  let shownRecords = [];
+  const leftOut = new Set();
+
   async function drawRecords() {
     const body = $('recordsBody');
+    shownRecords = [];
     let records = [];
     try {
       records = await Saves.listRecords();
@@ -712,10 +716,11 @@
       body.textContent = '아직 기록이 없습니다. 마지막 날까지 진행하면 남습니다.';
       return;
     }
+    shownRecords = records;
     const best = Records.bestId(records);
     const table = document.createElement('table');
     const head = table.createTHead().insertRow();
-    for (const name of ['이름', '기간', '넣은 돈', '최종 자산', '손익', '원금 대비', '연환산', '코스피 연환산', 'S&P 500 연환산', '매매(수동·자동)', '수수료', '조건', '']) {
+    for (const name of ['', '이름', '기간', '넣은 돈', '최종 자산', '손익', '원금 대비', '연환산', '코스피 연환산', 'S&P 500 연환산', '매매(수동·자동)', '수수료', '조건', '']) {
       const th = document.createElement('th');
       th.textContent = name;
       head.append(th);
@@ -725,6 +730,17 @@
     for (const rec of records) {
       const r = rec.report;
       const tr = tbody.insertRow();
+      const pick = document.createElement('input');
+      pick.type = 'checkbox';
+      pick.className = 'pickRec';
+      pick.setAttribute('aria-label', `${rec.name} 비교에 넣기`);
+      pick.checked = !leftOut.has(rec.id);
+      pick.addEventListener('change', () => {
+        if (pick.checked) leftOut.delete(rec.id);
+        else leftOut.add(rec.id);
+        UI.setText($('recordsMsg'), '');
+      });
+      tr.insertCell().append(pick);
       const name = tr.insertCell();
       name.textContent = rec.name;
       if (rec.id === best) {
@@ -783,8 +799,133 @@
 
   function openRecords() {
     if (UI.playing) UI.pause();
+    UI.setText($('recordsMsg'), '');
     $('records').hidden = false;
     drawRecords();
+  }
+
+  // ---------- 비교 리포트 ----------
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  const annualText = (v) => (v === null || v === undefined ? '-' : Format.pct(v));
+
+  function barSection(c) {
+    const rows = c.ranked.map((r) => ({ name: r.name, value: r.report.annualPct, color: COLOR.mine, ref: false }));
+    if (c.baseline) {
+      rows.push({ name: '코스피에 넣었다면', value: c.baseline.kospi, color: COLOR.kospi, ref: true });
+      rows.push({ name: 'S&P 500에 넣었다면', value: c.baseline.sp, color: COLOR.sp, ref: true });
+    }
+    const top = Math.max(1, ...rows.map((r) => Math.abs(r.value || 0)));
+    const wrap = el('div');
+    for (const r of rows) {
+      const row = el('div', `barRow${r.ref ? ' ref' : ''}`);
+      const track = el('div', 'barTrack');
+      if (r.value !== null) {
+        const fill = el('span', 'barFill');
+        fill.style.width = `${Math.abs(r.value) / top * 100}%`;
+        fill.style.background = r.value < 0 ? '#5b9bff' : r.color;
+        track.append(fill);
+      }
+      row.append(el('span', 'nm', r.name), track, el('span', 'num', annualText(r.value)));
+      wrap.append(row);
+    }
+    return wrap;
+  }
+
+  function reportTable(className, headers, rows) {
+    const table = el('table', className);
+    const head = table.createTHead().insertRow();
+    for (const h of headers) head.append(el('th', '', h));
+    const tbody = table.createTBody();
+    for (const cells of rows) {
+      const tr = tbody.insertRow();
+      for (const c of cells) {
+        const td = tr.insertCell();
+        if (c && typeof c === 'object') {
+          td.textContent = c.text;
+          if (c.value) td.className = UI.signClass(c.value);
+        } else td.textContent = c;
+      }
+    }
+    return table;
+  }
+
+  function summaryLines(c) {
+    const out = [];
+    const [first, second] = c.ranked;
+    if (first && first.rank) {
+      out.push(el('p', 'lead', `연환산 1위는 ${first.name}(${annualText(first.report.annualPct)})입니다.`
+        + (second && second.rank ? ` 2위 ${second.name}보다 연 ${Math.abs(second.gap).toFixed(1)}%p 높습니다.` : '')));
+      out.push(el('p', 'lead', `연환산을 계산한 ${c.measured}개 기록 중 코스피를 이긴 기록은 ${c.beatKospi}개, S&P 500을 이긴 기록은 ${c.beatSp}개입니다.`));
+    } else {
+      out.push(el('p', 'lead', '연환산을 계산할 수 있는 기록이 없습니다. 기간이 30일 이상이어야 합니다.'));
+    }
+    if (!c.samePeriod) out.push(el('p', 'warnLine', '기간이 다른 기록이 섞여 있어 금액보다 연환산으로 비교하세요. 지수 기준선은 기간이 같을 때만 보여 줍니다.'));
+    else if (!c.sameMoney) out.push(el('p', 'warnLine', '넣은 돈이 달라 금액보다 %로 비교하세요. 지수 기준선은 넣은 돈이 같을 때만 보여 줍니다.'));
+    return out;
+  }
+
+  function leaderValue(l) {
+    if (l.key === 'annual' || l.key === 'pct') return Format.pct(l.value);
+    if (l.key === 'pnl') return Format.krwSignedShort(l.value);
+    return Format.krwShort(l.value);
+  }
+
+  function showCompare() {
+    const chosen = shownRecords.filter((r) => !leftOut.has(r.id));
+    if (chosen.length < 2) {
+      UI.setText($('recordsMsg'), '비교할 기록을 2개 이상 골라 주세요.');
+      return;
+    }
+    const c = Records.compare(chosen);
+    const ranking = reportTable('rankTable',
+      ['순위', '이름', '연환산', '1위와 차이', '원금 대비', '손익', '최종 자산', '넣은 돈', '수수료', '코스피 연환산', 'S&P 500 연환산'],
+      c.ranked.map((r) => [
+        r.rank || '-', r.name,
+        { text: annualText(r.report.annualPct), value: r.report.annualPct },
+        r.gap === null ? '-' : r.gap === 0 ? '1위' : `${r.gap.toFixed(1).replace('-', '−')}%p`,
+        { text: Format.pct(r.report.pnlPct), value: r.report.pnlPct },
+        { text: Format.krwSignedShort(r.report.pnl), value: r.report.pnl },
+        Format.krwShort(r.report.total), Format.krwShort(r.report.contributed), Format.krwShort(Records.feeTotal(r.report)),
+        annualText(r.report.kospiAnnualPct), annualText(r.report.spAnnualPct),
+      ]));
+    const leaders = el('div', 'leaderList');
+    for (const l of c.leaders) {
+      const box = el('div');
+      box.append(el('small', '', l.label), el('b', '', l.name), document.createTextNode(` ${leaderValue(l)}`));
+      leaders.append(box);
+    }
+    const stockRows = c.stocks.map((s) => [s.name, ...c.ranked.map((r) => {
+      const cell = s.cells[r.id];
+      return cell ? { text: `${Format.pct(cell.pnlPct)} / 연 ${annualText(cell.annualPct)}`, value: cell.pnlPct } : '-';
+    })]);
+    const conditions = el('div');
+    for (const r of c.ranked) {
+      const row = el('div', 'condRow');
+      const s = r.settings;
+      const base = `초기 ${Format.krwShort(s.krw0)}${s.usd0 ? ` + ${Format.usd(s.usd0)}` : ''}, 월 ${Format.krwShort(s.monthlyKrw)}`;
+      const trades = `수동 ${r.report.counts.buys + r.report.counts.sells}회, 자동 ${r.report.counts.autoBuys}회`;
+      row.append(el('b', '', r.name), el('span', '', `${Format.date(r.report.startDate)} ~ ${Format.date(r.report.endDate)} · ${base} · ${trades}${r.rules.length ? ` · ${r.rules.join(', ')}` : ''}`));
+      conditions.append(row);
+    }
+    $('compareBody').replaceChildren(
+      section('요약'), ...summaryLines(c),
+      section('연환산 비교'), barSection(c),
+      section('순위'), ranking,
+      section('항목별 1위'), leaders,
+      section('종목별 손익 (원금 대비 / 연환산)'),
+      c.stocks.length ? reportTable('stockCompare', ['종목', ...c.ranked.map((r) => r.name)], stockRows) : el('p', 'note', '거래한 종목이 없습니다.'),
+      section('조건'), conditions,
+      el('p', 'note', '연환산은 돈이 들어가고 나온 날짜를 반영한 연 수익률(XIRR)입니다. 달러 종목은 환율을 뺀 달러 기준이고, 지수는 배당을 뺀 가격지수입니다.'),
+    );
+    $('compare').hidden = false;
+    $('compareBody').scrollTop = 0;
   }
 
   // ---------- 다시 시작 ----------
@@ -1034,6 +1175,8 @@
     $('historyBtn').addEventListener('click', openRecords);
     $('historyStart').addEventListener('click', openRecords);
     $('recordsClose').addEventListener('click', () => { $('records').hidden = true; });
+    $('compareBtn').addEventListener('click', showCompare);
+    $('compareClose').addEventListener('click', () => { $('compare').hidden = true; });
     const box = $('chartbox');
     box.addEventListener('mousemove', onChartMove);
     box.addEventListener('mouseleave', hideHover);

@@ -140,7 +140,27 @@ small.up { color: var(--up); } small.down { color: var(--down); }
 .reportBody td .btn { padding: 2px 8px; font-size: 12px; margin-left: 3px; }
 .bestMark { display: inline-block; margin-left: 5px; padding: 0 5px; border-radius: 4px; background: #3a2f12; color: var(--warn); font-size: 11px; }
 #historyStart { margin-top: 6px; }
-#summary { z-index: 11; }
+#summary, #compare { z-index: 11; }
+#compare > div { width: 1000px; }
+.reportBtns .go { width: auto; flex: 1 1 0; white-space: nowrap; }
+.reportBtns .go.primary { background: #d9463e; color: #fff; flex: 2 1 0; }
+#records td:nth-child(2), #records th:nth-child(2), .rankTable td:nth-child(2), .rankTable th:nth-child(2) { text-align: left; }
+.pickRec { width: 16px; height: 16px; accent-color: #d9463e; vertical-align: middle; }
+.lead { font-size: 13.5px; margin: 0 0 4px; }
+.warnLine { color: var(--warn); font-size: 12.5px; margin: 0 0 4px; }
+.barRow { display: grid; grid-template-columns: 150px minmax(0, 1fr) 62px; gap: 8px; align-items: center; padding: 3px 0; font-size: 12.5px; }
+.barRow .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barRow.ref .nm { color: var(--ink2); }
+.barTrack { height: 12px; }
+.barFill { display: block; height: 12px; border-radius: 0 4px 4px 0; min-width: 2px; }
+.barRow .num { text-align: right; }
+.leaderList { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.leaderList div { background: var(--raise); border-radius: 6px; padding: 7px 10px; }
+.leaderList small { display: block; }
+.leaderList b { font-weight: 600; }
+.condRow { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.condRow b { display: block; font-weight: 600; font-size: 13px; }
+.condRow span { color: var(--ink2); }
 #records > div { width: 1240px; }
 #records td { font-size: 12.5px; }
 #records th { padding-left: 8px; }
@@ -183,4 +203,5 @@ small.up { color: var(--up); } small.down { color: var(--down); }
   .reportBody { overflow-x: auto; }
   .reportBtns { flex-wrap: wrap; }
   .reportBtns .go { flex: 1 1 40%; }
+  .reportBtns .go.primary { flex: 1 1 100%; }
 }
