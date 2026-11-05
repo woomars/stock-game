@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>10년 모의 투자</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="start" hidden>
+  <div class="setup">
+    <h1>10년 모의 투자</h1>
+    <form id="newGame">
+      <h4>새 게임</h4>
+      <div class="field"><label for="sKrw">초기 자금 (원화)</label><input id="sKrw" inputmode="numeric" value="100,000,000"></div>
+      <div class="field"><label for="sUsd">초기 자금 (달러)</label><input id="sUsd" inputmode="decimal" value="0"></div>
+      <div class="field"><label for="sMonthly">월 추가 투자금 (매월 첫 거래일, 원화)</label><input id="sMonthly" inputmode="numeric" value="1,000,000"></div>
+      <div class="field"><label for="sFx">환전 수수료 (%)</label><input id="sFx" inputmode="decimal" value="1.0"></div>
+      <div class="field"><label for="sTrade">주식 매매 수수료, 국내·해외 (%)</label><input id="sTrade" inputmode="decimal" value="0.1"></div>
+      <div class="field"><label for="sTax">증권거래세, 국내 주식 매도 시 (%)</label><input id="sTax" inputmode="decimal" value="0.2"></div>
+      <div class="field"><label for="sDate">시작일</label><input id="sDate" type="date" value="2016-11-07" style="width:150px"></div>
+      <button class="go primary" type="submit">게임 시작</button>
+      <p class="msg" id="sMsg"></p>
+    </form>
+    <div class="saves">
+      <h4>이어 하기</h4>
+      <div id="recent"></div>
+      <button class="go" id="loadFile" type="button">세이브 파일 불러오기</button>
+      <button class="go" id="historyStart" type="button">투자 기록 비교</button>
+      <p class="msg" id="loadMsg"></p>
+    </div>
+  </div>
+</div>
+
+<div id="game" hidden>
+  <div class="top">
+    <span class="date" id="tDate"></span>
+    <button class="btn" id="play" type="button">▶ 재생</button>
+    <span class="speed" id="speed">
+      <button type="button" data-speed="1">1×</button><button type="button" data-speed="5" class="on">5×</button><button type="button" data-speed="20">20×</button><button type="button" data-speed="60">60×</button>
+    </span>
+    <button class="btn" id="save" type="button">저장</button>
+    <button class="btn" id="exportBtn" type="button" title="저장 내용을 파일로 내려받아 백업합니다" hidden>파일로 내보내기</button>
+    <button class="btn" id="restart" type="button" title="같은 조건과 자동투자로 첫날부터 다시 합니다">다시 시작</button>
+    <button class="btn" id="newStart" type="button" title="설정 화면으로 돌아갑니다">새로 시작</button>
+    <button class="btn" id="reportBtn" type="button" hidden>보고서</button>
+    <button class="btn" id="historyBtn" type="button" title="끝낸 게임의 투자 보고서를 비교합니다">기록</button>
+    <span class="stats">
+      <span class="stat"><small>총자산</small><b id="tTotal"></b></span>
+      <span class="stat"><small>손익</small><b id="tPnl"></b></span>
+      <span class="stat"><small>원화</small><b id="tKrw"></b></span>
+      <span class="stat"><small id="tFx"></small><b id="tUsd"></b></span>
+      <span class="stat"><small>채권</small><b id="tBond"></b></span>
+    </span>
+  </div>
+  <div class="body">
+    <div class="left">
+      <div class="crumb" id="crumb"></div>
+      <div class="legend" id="legend"></div>
+      <div class="chartbox" id="chartbox">
+        <svg class="chart" id="chart"></svg>
+        <div class="cross" id="cross" hidden></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="lockmsg">재생 중입니다. 멈추면 주문할 수 있습니다.</div>
+      <div class="tabs" id="tabs">
+        <button type="button" class="on" data-t="stock">주식</button><button type="button" data-t="fx">환전</button><button type="button" data-t="bond">채권</button><button type="button" data-t="auto">자동투자</button><button type="button" data-t="sell">매도 규칙</button>
+      </div>
+
+      <div class="pane on" id="p-stock">
+        <div class="scroll" id="stocks"></div>
+        <div class="sec ord">
+          <div class="seg" id="side"><button type="button" class="buy on" data-side="buy">매수</button><button type="button" class="sell" data-side="sell">매도</button></div>
+          <div class="field"><span id="oName"></span><span id="oPrice"></span></div>
+          <div class="field"><label for="oQty">수량 <button type="button" class="linkbtn" id="oAll" hidden>전량</button></label><input id="oQty" inputmode="numeric" value="1"></div>
+          <div class="field"><span>금액</span><span id="oAmt"></span></div>
+          <button class="go buy" id="oGo" type="button">매수</button>
+          <p class="msg" id="oMsg"></p>
+        </div>
+      </div>
+
+      <div class="pane" id="p-fx">
+        <div class="scroll">
+          <div class="sec">
+            <h5>오늘 환율</h5>
+            <div class="big" id="fxSpot"></div>
+            <p class="note" id="fxBal"></p>
+          </div>
+          <div class="sec ord">
+            <h5>지금 환전</h5>
+            <div class="seg" id="fxDir"><button type="button" class="neu on" data-dir="KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW">달러 → 원화</button></div>
+            <div class="field"><label for="fxUsd" id="fxUsdLabel">받을 달러</label><input id="fxUsd" inputmode="decimal" value="1,000"></div>
+            <div class="field"><span id="fxRateLabel"></span><span id="fxRate"></span></div>
+            <div class="field"><span id="fxKrwLabel">나가는 원화</span><span id="fxKrw"></span></div>
+            <button class="go" id="fxGo" type="button">환전</button>
+            <p class="note" id="fxFee"></p>
+            <p class="msg" id="fxMsg"></p>
+          </div>
+          <div class="sec">
+            <h5 id="foTitle"></h5>
+            <div id="foList"></div>
+            <div class="ord">
+              <div class="seg" id="foDir"><button type="button" class="neu on" data-dir="KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW">달러 → 원화</button></div>
+              <div class="field"><label for="foRate" id="foRateLabel">환율이 이 값 이하일 때</label><input id="foRate" inputmode="decimal" value="1,100"></div>
+              <div class="field"><label for="foUsd">금액 (달러)</label><input id="foUsd" inputmode="decimal" value="1,000"></div>
+              <button class="go" id="foGo" type="button">+ 예약 추가</button>
+              <p class="msg" id="foMsg"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="p-bond">
+        <div class="scroll">
+          <div class="sec ord">
+            <h5>오늘 금리 (1년 만기)</h5>
+            <div class="seg" id="bCountry"><button type="button" class="neu on" data-country="KR" id="bKr"></button><button type="button" class="neu" data-country="US" id="bUs"></button></div>
+            <div class="field"><label for="bAmt" id="bAmtLabel">넣을 금액</label><input id="bAmt" inputmode="decimal" value="1,000,000"></div>
+            <div class="field"><span id="bPayLabel"></span><span id="bPay"></span></div>
+            <button class="go" id="bGo" type="button">채권 매수</button>
+            <p class="note">만기까지 찾을 수 없고, 만기일에 원금과 이자가 해당 통화 계좌로 들어옵니다.</p>
+            <p class="msg" id="bMsg"></p>
+          </div>
+          <div class="sec">
+            <h5 id="bTitle"></h5>
+            <div id="bList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="p-auto">
+        <div class="scroll">
+          <div class="sec ord">
+            <h5 id="aFormTitle">새 자동투자</h5>
+            <div class="field"><label for="aStock">종목</label><select id="aStock"></select></div>
+            <div class="seg" id="aFreq"><button type="button" class="neu" data-freq="day">매일</button><button type="button" class="neu" data-freq="week">매주</button><button type="button" class="neu on" data-freq="month">매월</button><button type="button" class="neu" data-freq="year">매년</button></div>
+            <div class="field"><label for="aAmt" id="aAmtLabel">회차당 금액</label><input id="aAmt" inputmode="decimal" value="500,000"></div>
+            <div class="aBtns">
+              <button class="go" id="aGo" type="button">자동투자 추가</button>
+              <button class="go" id="aCancel" type="button" hidden>취소</button>
+            </div>
+            <p class="msg" id="aMsg"></p>
+            <p class="note" id="aListing"></p>
+            <p class="note">달러 계좌가 모자라면 원화 계좌에서 모자란 만큼 자동 환전합니다. 원화도 모자라면 그 회차는 건너뛰고 기록합니다. 재생을 누르면 시작합니다.</p>
+          </div>
+          <div class="sec">
+            <h5 id="aTitle"></h5>
+            <div id="aList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="p-sell">
+        <div class="scroll">
+          <div class="sec ord">
+            <h5 id="rFormTitle">새 매도 규칙</h5>
+            <div class="field"><label for="rStock">종목</label><select id="rStock"></select></div>
+            <div class="seg" id="rOp"><button type="button" class="neu on" data-op="gte">수익률 이상</button><button type="button" class="neu" data-op="lte">수익률 이하</button></div>
+            <div class="field"><label for="rPct">평균 단가 대비 수익률 (%)</label><input id="rPct" inputmode="decimal" value="20"></div>
+            <div class="field"><label for="rQty">보유량 중 매도 비율 (%)</label><input id="rQty" inputmode="decimal" value="100"></div>
+            <div class="field"><label for="rTimes">실행 횟수</label><input id="rTimes" inputmode="numeric" value="1"></div>
+            <div class="field"><label for="rWait">대기 기간 (일)</label><input id="rWait" inputmode="numeric" value="0"></div>
+            <div class="aBtns">
+              <button class="go" id="rGo" type="button">매도 규칙 추가</button>
+              <button class="go" id="rCancel" type="button" hidden>취소</button>
+            </div>
+            <p class="msg" id="rMsg"></p>
+            <p class="note">다음 거래일부터 그날 종가로 판단합니다. 규칙을 만든 날이나 직전 매도일에서 대기 기간이 지나고 조건이 맞으면 팝니다. 정한 횟수를 다 채우면 실행됨으로 바뀌고, 다시 시작을 누르면 처음부터 새로 합니다.</p>
+          </div>
+          <div class="sec">
+            <h5 id="rTitle"></h5>
+            <div id="rList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="dialog" id="records" hidden>
+  <div>
+    <h3>투자 기록</h3>
+    <p class="note">끝까지 진행한 게임의 보고서가 저절로 남습니다. 이 기기의 이 브라우저에만 저장됩니다.</p>
+    <div class="reportBody" id="recordsBody"></div>
+    <div class="reportBtns"><button class="go" id="recordsClose" type="button">닫기</button></div>
+  </div>
+</div>
+
+<div class="dialog" id="summary" hidden>
+  <div>
+    <h3>투자 보고서</h3>
+    <p class="note" id="summaryPeriod"></p>
+    <p class="note" id="summaryNote"></p>
+    <div class="reportBody" id="summaryRows"></div>
+    <div class="reportBtns">
+      <button class="go" id="summarySave" type="button">저장</button>
+      <button class="go" id="summaryRestart" type="button">다시 시작</button>
+      <button class="go" id="summaryNew" type="button">새로 시작</button>
+      <button class="go" id="summaryClose" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/format.js"></script>
+<script src="js/saves.js"></script>
+<script src="js/records.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/tabs.js"></script>
+</body>
+</html>
