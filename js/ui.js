@@ -421,6 +421,14 @@
       amount = Format.money(Engine.roundMoney(gross * (1 + rate / 100), stock.currency), stock.currency);
     }
     UI.setText($('oAmt'), amount);
+    const fx = UI.side === 'buy' && valid ? Engine.buyFxNeed(data, s, i, qty) : null;
+    let fxNote = '';
+    if (fx) {
+      fxNote = fx.enough
+        ? `달러 부족분 ${Format.usd(fx.usd)}를 원화 ${Format.krw(fx.krw)}으로 자동 환전합니다.`
+        : `달러 부족분 ${Format.usd(fx.usd)}를 환전할 원화가 모자랍니다.`;
+    }
+    UI.setText($('oFx'), fxNote);
     const go = $('oGo');
     go.className = `go ${UI.side}`;
     UI.setText(go, UI.side === 'buy' ? '매수' : '매도');
@@ -1372,7 +1380,7 @@
     drawRecent();
   }
 
-  // 핸드폰에는 기록 칸을 둘 자리가 없어 '내역' 탭 안으로 옮긴다.
+  // 핸드폰에는 기록 칸을 둘 자리가 없어 '내역' 탭 안으로 옮긴다. style.css의 핸드폰 조건과 같다.
   const phoneWidth = globalThis.matchMedia('(max-width: 760px)');
   function placeLog() {
     if (phoneWidth.matches) $('p-log').append($('log'));
@@ -1381,6 +1389,16 @@
       if (UI.activeTab === 'log') selectTab('stock');
     }
   }
+
+  // 핸드폰에서는 누른 쪽을 크게 본다. 'chart'면 매매 칸이, 'trade'면 그래프가 접힌다.
+  function setFocus(area) {
+    if (!phoneWidth.matches || $('game').dataset.focus === area) return;
+    $('game').dataset.focus = area;
+    hideHover(); // 값 상자는 접히기 전 위치에 맞춰져 있다
+  }
+
+  // 가로 안내가 화면을 가리는 동안 몰래 재생되지 않게 멈춘다. style.css의 #rotateNotice 조건과 같다.
+  const phoneLandscape = globalThis.matchMedia('(orientation: landscape) and (max-height: 500px) and (min-width: 520px) and (pointer: coarse)');
 
   function setMenu(open) {
     $('topMenu').classList.toggle('open', open);
@@ -1400,6 +1418,11 @@
     $('tabs').addEventListener('click', (e) => { if (e.target.dataset.t) selectTab(e.target.dataset.t); });
     placeLog();
     phoneWidth.addEventListener('change', placeLog);
+    phoneLandscape.addEventListener('change', (e) => { if (e.matches && UI.playing) UI.pause(); });
+    // 스크롤은 click이 생기지 않으므로 목록을 미는 동안에는 접히지 않는다. 메뉴를 닫는 터치도 건너뛴다.
+    const focusOn = (area) => () => { if (!$('topMenu').classList.contains('open')) setFocus(area); };
+    document.querySelector('.left').addEventListener('click', focusOn('chart'));
+    document.querySelector('.right').addEventListener('click', focusOn('trade'));
     $('moreBtn').addEventListener('click', (e) => {
       e.stopPropagation();
       setMenu(!$('topMenu').classList.contains('open'));
@@ -1462,7 +1485,8 @@
     box.addEventListener('touchstart', onTouch, { passive: true });
     box.addEventListener('touchmove', onTouch, { passive: true });
     document.addEventListener('touchstart', (e) => { if (!box.contains(e.target)) hideHover(); }, { passive: true });
-    window.addEventListener('resize', () => { if (UI.state) drawChart(); });
+    // 화면을 돌리면 그래프 칸의 크기가 정해진 뒤에 다시 그려야 그림이 찌그러지지 않는다.
+    new ResizeObserver(() => { if (UI.state && !$('game').hidden) drawChart(); }).observe($('chartbox'));
   }
 
   buildStockList();

@@ -73,6 +73,33 @@
     state.history.pnl[state.history.pnl.length - 1] = valuation(data, state).pnl;
   }
 
+  function buyCost(state, s, qty, price) {
+    const gross = qty * price;
+    const fee = roundMoney(gross * state.settings.tradeFeePct / 100, s.currency);
+    return { fee, cost: roundMoney(gross + fee, s.currency) };
+  }
+
+  // 달러 종목을 살 때 모자란 달러만 원화에서 환전한다. 원화도 모자라면 아무것도 바꾸지 않고 false.
+  function coverUsd(data, state, cost) {
+    if (cost <= state.usd) return true;
+    const short = roundMoney(cost - state.usd, 'USD');
+    if (fxQuote(data, state, 'KRW_TO_USD', short).krw > state.krw) return false;
+    settleFx(data, state, 'KRW_TO_USD', short, { type: 'fx_auto' });
+    return true;
+  }
+
+  // 이 수량을 사면 자동 환전될 달러와 원화. 환전이 필요 없으면 null.
+  function buyFxNeed(data, state, stockIdx, qty) {
+    const s = data.stocks[stockIdx];
+    const price = s && s.close[state.dayIdx];
+    if (!s || s.currency !== 'USD' || price == null || !Number.isInteger(qty) || qty <= 0) return null;
+    const { cost } = buyCost(state, s, qty, price);
+    if (cost <= state.usd) return null;
+    const usd = roundMoney(cost - state.usd, 'USD');
+    const q = fxQuote(data, state, 'KRW_TO_USD', usd);
+    return { usd, krw: q.krw, rate: q.rate, enough: q.krw <= state.krw };
+  }
+
   function buy(data, state, stockIdx, qty) {
     const s = stockOf(data, stockIdx);
     if (!s) return fail('종목 없음');
@@ -80,11 +107,11 @@
     const st = tradeStatus(data, state, stockIdx);
     if (!st.ok) return st;
     const price = s.close[state.dayIdx];
-    const gross = qty * price;
-    const fee = roundMoney(gross * state.settings.tradeFeePct / 100, s.currency);
-    const cost = roundMoney(gross + fee, s.currency);
+    const { fee, cost } = buyCost(state, s, qty, price);
     const key = cashKey(s.currency);
-    if (cost > state[key]) return fail('잔액 부족');
+    if (s.currency === 'USD') {
+      if (!coverUsd(data, state, cost)) return fail('잔액 부족');
+    } else if (cost > state[key]) return fail('잔액 부족');
     state[key] = roundMoney(state[key] - cost, s.currency);
     const held = state.holdings[stockIdx];
     const avg = held ? { avg: held.avgCost } : {};
@@ -550,12 +577,7 @@
     const fee = roundMoney(gross * feeRate, s.currency);
     const cost = roundMoney(gross + fee, s.currency);
     const key = cashKey(s.currency);
-    if (cost > state[key]) {
-      if (s.currency !== 'USD') { skip('잔액 부족'); return; }
-      const short = roundMoney(cost - state.usd, 'USD');
-      if (fxQuote(data, state, 'KRW_TO_USD', short).krw > state.krw) { skip('잔액 부족'); return; }
-      settleFx(data, state, 'KRW_TO_USD', short, { type: 'fx_auto' });
-    }
+    if (s.currency === 'USD' ? !coverUsd(data, state, cost) : cost > state[key]) { skip('잔액 부족'); return; }
     state[key] = roundMoney(state[key] - cost, s.currency);
     addShares(state, rule.stockIdx, qty, price);
     pushEvent(state, {
@@ -733,7 +755,7 @@
   const Engine = {
     report, annualizedPct, sellCostPct, listingIdx, restartGame,
     addSellRule, editSellRule, setSellRulePaused, deleteSellRule,
-    roundMoney, newGame, advance, tradeStatus, lastClose, buy, sell, valuation, adjustedSeries,
+    roundMoney, newGame, advance, tradeStatus, lastClose, buy, buyFxNeed, sell, valuation, adjustedSeries,
     fxQuote, exchange, addFxOrder, cancelFxOrder, bondQuote, buyBond,
     addAutoRule, stopAutoRule, setAutoRulePaused, editAutoRule, nextAutoDate, alignStartToListings,
   };
