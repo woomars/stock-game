@@ -1372,6 +1372,21 @@
     drawRecent();
   }
 
+  // 핸드폰에는 기록 칸을 둘 자리가 없어 '내역' 탭 안으로 옮긴다.
+  const phoneWidth = globalThis.matchMedia('(max-width: 760px)');
+  function placeLog() {
+    if (phoneWidth.matches) $('p-log').append($('log'));
+    else {
+      $('game').append($('log'));
+      if (UI.activeTab === 'log') selectTab('stock');
+    }
+  }
+
+  function setMenu(open) {
+    $('topMenu').classList.toggle('open', open);
+    $('moreBtn').setAttribute('aria-expanded', String(open));
+  }
+
   function selectTab(name) {
     UI.activeTab = name;
     for (const b of $('tabs').children) b.classList.toggle('on', b.dataset.t === name);
@@ -1383,6 +1398,13 @@
     $('play').addEventListener('click', () => (UI.playing ? UI.pause() : UI.play()));
     $('speed').addEventListener('click', (e) => { if (e.target.dataset.speed) UI.setSpeed(Number(e.target.dataset.speed)); });
     $('tabs').addEventListener('click', (e) => { if (e.target.dataset.t) selectTab(e.target.dataset.t); });
+    placeLog();
+    phoneWidth.addEventListener('change', placeLog);
+    $('moreBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      setMenu(!$('topMenu').classList.contains('open'));
+    });
+    document.addEventListener('click', () => setMenu(false));
     $('stockSearch').addEventListener('input', (e) => {
       stockFilter.query = e.target.value.trim().toLowerCase();
       filterHits.clear();

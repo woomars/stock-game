@@ -5,7 +5,7 @@
 <title>10년 모의 투자</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=c1338690ad">
+<link rel="stylesheet" href="style.css?v=80220b263a">
 </head>
 <body>
 
@@ -43,12 +43,15 @@
       <button type="button" data-speed="1">1×</button><button type="button" data-speed="5" class="on">5×</button><button type="button" data-speed="20">20×</button><button type="button" data-speed="60">60×</button>
     </span>
     <button class="btn" id="save" type="button">저장</button>
+    <button class="btn phoneOnly" id="moreBtn" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="topMenu">⋯</button>
+    <div class="topMenu" id="topMenu">
     <button class="btn" id="exportBtn" type="button" title="저장 내용을 파일로 내려받아 백업합니다" hidden>파일로 내보내기</button>
     <button class="btn" id="restart" type="button" title="같은 조건과 자동투자로 첫날부터 다시 합니다">다시 시작</button>
     <button class="btn" id="newStart" type="button" title="설정 화면으로 돌아갑니다">새로 시작</button>
     <button class="btn" id="reportBtn" type="button" hidden>보고서</button>
     <button class="btn" id="historyBtn" type="button" title="끝낸 게임의 투자 보고서를 비교합니다">기록</button>
     <button class="btn" id="trophyBtn" type="button" title="모은 트로피와 메달을 봅니다">트로피</button>
+    </div>
     <span class="stats">
       <span class="stat"><small>총자산</small><b id="tTotal"></b></span>
       <span class="stat"><small>손익</small><b id="tPnl"></b></span>
@@ -70,7 +73,7 @@
     <div class="right">
       <div class="lockmsg">재생 중입니다. 멈추면 주문할 수 있습니다.</div>
       <div class="tabs" id="tabs">
-        <button type="button" class="on" data-t="stock">주식</button><button type="button" data-t="fx">환전</button><button type="button" data-t="bond">채권</button><button type="button" data-t="auto">자동투자</button><button type="button" data-t="sell">매도 규칙</button>
+        <button type="button" class="on" data-t="stock">주식</button><button type="button" data-t="fx">환전</button><button type="button" data-t="bond">채권</button><button type="button" data-t="auto">자동투자</button><button type="button" data-t="sell">매도 규칙</button><button type="button" class="phoneOnly" data-t="log">내역</button>
       </div>
 
       <div class="pane on" id="p-stock">
@@ -88,6 +91,8 @@
           <p class="msg" id="oMsg"></p>
         </div>
       </div>
+
+      <div class="pane" id="p-log"></div>
 
       <div class="pane" id="p-fx">
         <div class="scroll">
@@ -244,8 +249,8 @@
 <script src="js/saves.js?v=23e1c75daa"></script>
 <script src="js/records.js?v=f0c71fb0e5"></script>
 <script src="js/achievements.js?v=24002e5047"></script>
-<script src="js/chart.js?v=77d4f44aeb"></script>
-<script src="js/ui.js?v=3fea844491"></script>
+<script src="js/chart.js?v=ebdfaeed80"></script>
+<script src="js/ui.js?v=021311cd4f"></script>
 <script src="js/tabs.js?v=600c30e9ca"></script>
 </body>
 </html>

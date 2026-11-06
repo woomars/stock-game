@@ -45,13 +45,11 @@
     return out;
   }
 
-  function timeTicks(dates, fromIdx, toIdx) {
+  function timeTicks(dates, fromIdx, toIdx, maxLabels = 12) {
+    const thin = (ticks) => (ticks.length <= maxLabels ? ticks : ticks.filter((_, i) => i % Math.ceil(ticks.length / maxLabels) === 0));
     const years = yearTicks(dates, fromIdx, toIdx);
-    if (years.length > 12) return years.filter((_, i) => i % Math.ceil(years.length / 12) === 0);
-    if (years.length >= 2) return years;
-    const months = monthTicks(dates, fromIdx, toIdx);
-    if (months.length <= 12) return months;
-    return months.filter((_, i) => i % Math.ceil(months.length / 12) === 0);
+    if (years.length >= 2) return thin(years);
+    return thin(monthTicks(dates, fromIdx, toIdx));
   }
 
   // values[0]은 달력 칸 fromIdx의 값이다. 점이 많으면 maxPoints 정도로 솎되 끝점은 남긴다.
@@ -109,7 +107,8 @@
       out.push(`<line x1="${L}" x2="${W - R}" y1="${py}" y2="${py}" stroke="${v === 0 ? THEME.zero : THEME.grid}"/>`);
       out.push(`<text x="${L - 7}" y="${py + 4}" text-anchor="end" font-size="11" fill="${THEME.text}">${escapeXml(yFormat(v))}</text>`);
     }
-    for (const t of timeTicks(dates, fromIdx, toIdx)) {
+    // 글자가 겹치지 않을 만큼만 쓴다. 연도 하나의 폭이 약 30px이다.
+    for (const t of timeTicks(dates, fromIdx, toIdx, Math.max(2, Math.min(12, Math.floor((W - L - R) / 46))))) {
       out.push(`<text x="${round1(x(t.idx))}" y="${H - 5}" text-anchor="middle" font-size="11" fill="${THEME.text}">${t.label}</text>`);
     }
     const maxPoints = Math.max(50, Math.ceil(W));
