@@ -354,14 +354,20 @@
 
   function wire() {
     const aStock = $('aStock');
-    data.stocks.forEach((stock, i) => {
-      for (const select of [aStock, $('rStock')]) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = stock.name;
-        select.append(option);
+    for (const select of [aStock, $('rStock')]) {
+      for (const [board, label] of [['KOSPI', '코스피'], ['KOSDAQ', '코스닥'], ['US', '미국']]) {
+        const group = document.createElement('optgroup');
+        group.label = label;
+        data.stocks.forEach((stock, i) => {
+          if (stock.board !== board) return;
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = stock.name;
+          group.append(option);
+        });
+        select.append(group);
       }
-    });
+    }
 
     $('fxDir').addEventListener('click', (e) => {
       if (!e.target.dataset.dir || UI.playing) return;

@@ -2,11 +2,13 @@
 (function () {
   const APP = 'stock-game';
   const SAVE_VERSION = 1;
+  const OLD_FIRST_DATE = '2016-11-01'; // firstDate를 적지 않던 때의 달력 첫날
   const Engine = globalThis.Engine || (typeof require !== 'undefined' ? require('./engine.js') : null);
 
   function serialize(data, state, meta = {}) {
     return JSON.stringify({
-      app: APP, saveVersion: SAVE_VERSION, dataVersion: data.version, savedAt: new Date().toISOString(), ...meta, state,
+      app: APP, saveVersion: SAVE_VERSION, dataVersion: data.version, firstDate: data.dates[0],
+      savedAt: new Date().toISOString(), ...meta, state,
     });
   }
 
@@ -44,6 +46,21 @@
     return null;
   }
 
+  // 세이브는 날짜를 달력 칸 번호로 기억한다. 달력 앞쪽이 늘어나면 같은 날짜를 가리키도록 번호를 민다.
+  function shiftDays(state, offset) {
+    if (!offset || !state || typeof state !== 'object') return;
+    if (Number.isInteger(state.dayIdx)) state.dayIdx += offset;
+    if (Number.isInteger(state.startIdx)) state.startIdx += offset;
+    for (const e of Array.isArray(state.events) ? state.events : []) {
+      if (e && Number.isInteger(e.d)) e.d += offset;
+    }
+    for (const rules of [state.autoRules, state.sellRules]) {
+      for (const r of Array.isArray(rules) ? rules : []) {
+        if (r && Number.isInteger(r.fromIdx)) r.fromIdx += offset;
+      }
+    }
+  }
+
   function parse(text, data) {
     let file;
     try {
@@ -53,6 +70,7 @@
     }
     if (!file || typeof file !== 'object' || file.app !== APP) return { ok: false, reason: '이 게임의 세이브 파일이 아닙니다' };
     if (file.saveVersion !== SAVE_VERSION) return { ok: false, reason: '지원하지 않는 세이브 버전입니다' };
+    shiftDays(file.state, Math.max(data.dates.indexOf(file.firstDate || OLD_FIRST_DATE), 0));
     const problem = checkState(file.state, data);
     if (problem) return { ok: false, reason: problem };
     const result = { ok: true, state: file.state, savedAt: file.savedAt };

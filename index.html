@@ -5,7 +5,7 @@
 <title>10년 모의 투자</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=bbd726ed07">
+<link rel="stylesheet" href="style.css?v=c1338690ad">
 </head>
 <body>
 
@@ -74,6 +74,10 @@
       </div>
 
       <div class="pane on" id="p-stock">
+        <div class="stockFilter">
+          <input id="stockSearch" type="search" placeholder="종목 검색" aria-label="종목 검색" autocomplete="off">
+          <div class="seg" id="stockBoard"><button type="button" class="neu on" data-board="all">전체</button><button type="button" class="neu" data-board="KOSPI">코스피</button><button type="button" class="neu" data-board="KOSDAQ">코스닥</button><button type="button" class="neu" data-board="US">미국</button></div>
+        </div>
         <div class="scroll" id="stocks"></div>
         <div class="sec ord">
           <div class="seg" id="side"><button type="button" class="buy on" data-side="buy">매수</button><button type="button" class="sell" data-side="sell">매도</button></div>
@@ -234,14 +238,14 @@
   </div>
 </div>
 
-<script src="data.js?v=4c8743bc0e"></script>
+<script src="data.js?v=c66d6c8d7f"></script>
 <script src="js/engine.js?v=5d5d4919e7"></script>
 <script src="js/format.js?v=1f972c151d"></script>
-<script src="js/saves.js?v=9a1b730c43"></script>
+<script src="js/saves.js?v=23e1c75daa"></script>
 <script src="js/records.js?v=f0c71fb0e5"></script>
 <script src="js/achievements.js?v=24002e5047"></script>
-<script src="js/chart.js?v=ac2e43218b"></script>
-<script src="js/ui.js?v=b02d659e9f"></script>
-<script src="js/tabs.js?v=54032cb524"></script>
+<script src="js/chart.js?v=77d4f44aeb"></script>
+<script src="js/ui.js?v=3fea844491"></script>
+<script src="js/tabs.js?v=600c30e9ca"></script>
 </body>
 </html>

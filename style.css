@@ -62,6 +62,9 @@ small.up { color: var(--up); } small.down { color: var(--down); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--line); }
 .row.plain { padding: 7px 0; }
 .row.plain:last-of-type { border-bottom: 0; }
+.stockFilter { padding: 8px 12px 0; }
+.stockFilter input { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+.stockFilter .seg { margin-bottom: 8px; }
 .pick { cursor: pointer; }
 .pick:hover { background: var(--raise); }
 .pick.on { background: #232a33; box-shadow: inset 2px 0 0 var(--ink); }

@@ -47,6 +47,7 @@
 
   function timeTicks(dates, fromIdx, toIdx) {
     const years = yearTicks(dates, fromIdx, toIdx);
+    if (years.length > 12) return years.filter((_, i) => i % Math.ceil(years.length / 12) === 0);
     if (years.length >= 2) return years;
     const months = monthTicks(dates, fromIdx, toIdx);
     if (months.length <= 12) return months;

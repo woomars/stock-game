@@ -293,9 +293,11 @@
     empty.id = 'stocksEmpty';
     empty.className = 'empty listEmpty';
     empty.hidden = true;
-    empty.textContent = '보유한 주식이 없습니다.';
     list.append(empty);
-    data.stocks.forEach((stock, i) => {
+    // 세이브가 종목을 배열 위치로 기억하므로 배열은 그대로 두고 보이는 순서만 시장별로 묶는다.
+    const order = data.stocks.map((_, i) => i).sort((a, b) => boardRank(a) - boardRank(b) || a - b);
+    order.forEach((i) => {
+      const stock = data.stocks[i];
       const row = document.createElement('div');
       row.className = 'row pick';
       row.dataset.i = i;
@@ -315,10 +317,61 @@
       list.append(row);
 
       rows[i] = { row, hold, price, change };
+      if (rowWatcher) rowWatcher.observe(row);
     });
   }
 
   const rows = [];
+  const stockFilter = { board: 'all', query: '' };
+  const filterHits = new Map();
+
+  // 목록이 길어 재생 중에는 화면에 보이는 줄만 값을 갱신한다. 줄이 보이기 시작하면 그때 채운다.
+  const inView = new Set();
+  const rowWatcher = typeof IntersectionObserver === 'function'
+    ? new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const i = Number(entry.target.dataset.i);
+        if (entry.isIntersecting) {
+          inView.add(i);
+          if (UI.state) drawStockRow(i);
+        } else inView.delete(i);
+      }
+    }, { rootMargin: '200px' })
+    : null;
+
+  function boardRank(i) { return ['KOSPI', 'KOSDAQ', 'US'].indexOf(data.stocks[i].board); }
+
+  function computeFilterHit(i) {
+    const stock = data.stocks[i];
+    if (stockFilter.board !== 'all' && stock.board !== stockFilter.board) return false;
+    return !stockFilter.query || stock.name.toLowerCase().includes(stockFilter.query) || stock.id.toLowerCase().includes(stockFilter.query);
+  }
+
+  function matchesFilter(i) {
+    if (!filterHits.has(i)) filterHits.set(i, computeFilterHit(i));
+    return filterHits.get(i);
+  }
+
+  function drawStockRow(i) {
+    const s = UI.state;
+    const r = rows[i];
+    const stock = data.stocks[i];
+    const price = Engine.lastClose(data, i, s.dayIdx);
+    const status = Engine.tradeStatus(data, s, i);
+    UI.setText(r.price, price == null ? '' : Format.priceBare(stock, price));
+    const change = dayChange(i);
+    let label = '';
+    let cls = '';
+    if (price == null) label = '상장 전';
+    else if (!status.ok) label = status.reason;
+    else if (change != null) { label = Format.pct(change); cls = UI.signClass(change); }
+    UI.setText(r.change, label);
+    if (r.change.className !== cls) r.change.className = cls;
+    const h = s.holdings[i];
+    UI.setText(r.hold, h ? `${Format.qty(h.qty)}주 보유` : '');
+    const on = UI.selected === i && UI.view === i;
+    if (r.row.classList.contains('on') !== on) r.row.classList.toggle('on', on);
+  }
 
   // 매도 중에는 보유 종목만 보여 준다. 고른 종목이 보유 종목이 아니면 첫 보유 종목으로 옮긴다.
   function followHoldings() {
@@ -333,28 +386,19 @@
     const s = UI.state;
     const selling = UI.side === 'sell';
     const empty = $('stocksEmpty');
-    const none = selling && !Object.keys(s.holdings).length;
+    const noHoldings = selling && !Object.keys(s.holdings).length;
+    const none = noHoldings || !rows.some((_, i) => matchesFilter(i) && (!selling || s.holdings[i]));
     if (empty.hidden === none) empty.hidden = !none;
+    UI.setText(empty, noHoldings ? '보유한 주식이 없습니다.' : '조건에 맞는 종목이 없습니다.');
     rows.forEach((r, i) => {
-      const hide = selling && !s.holdings[i];
+      const hide = (selling && !s.holdings[i]) || !matchesFilter(i);
       if (r.row.hidden !== hide) r.row.hidden = hide;
-      if (hide) return;
-      const stock = data.stocks[i];
-      const price = Engine.lastClose(data, i, s.dayIdx);
-      const status = Engine.tradeStatus(data, s, i);
-      UI.setText(r.price, price == null ? '' : Format.priceBare(stock, price));
-      const change = dayChange(i);
-      let label = '';
-      let cls = '';
-      if (price == null) label = '상장 전';
-      else if (!status.ok) label = status.reason;
-      else if (change != null) { label = Format.pct(change); cls = UI.signClass(change); }
-      UI.setText(r.change, label);
-      r.change.className = cls;
-      const h = s.holdings[i];
-      UI.setText(r.hold, h ? `${Format.qty(h.qty)}주 보유` : '');
-      const on = UI.selected === i && UI.view === i;
-      if (r.row.classList.contains('on') !== on) r.row.classList.toggle('on', on);
+      if (hide || (rowWatcher && !inView.has(i))) {
+        const on = UI.selected === i && UI.view === i;
+        if (r.row.classList.contains('on') !== on) r.row.classList.toggle('on', on);
+        return;
+      }
+      drawStockRow(i);
     });
   }
 
@@ -1339,6 +1383,18 @@
     $('play').addEventListener('click', () => (UI.playing ? UI.pause() : UI.play()));
     $('speed').addEventListener('click', (e) => { if (e.target.dataset.speed) UI.setSpeed(Number(e.target.dataset.speed)); });
     $('tabs').addEventListener('click', (e) => { if (e.target.dataset.t) selectTab(e.target.dataset.t); });
+    $('stockSearch').addEventListener('input', (e) => {
+      stockFilter.query = e.target.value.trim().toLowerCase();
+      filterHits.clear();
+      UI.refresh();
+    });
+    $('stockBoard').addEventListener('click', (e) => {
+      if (!e.target.dataset.board) return;
+      stockFilter.board = e.target.dataset.board;
+      filterHits.clear();
+      for (const b of $('stockBoard').children) b.classList.toggle('on', b === e.target);
+      UI.refresh();
+    });
     $('side').addEventListener('click', (e) => {
       const side = e.target.dataset.side;
       if (!side || UI.playing) return;
