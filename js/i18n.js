@@ -1201,8 +1201,8 @@
     tenBagger: ['Ten-Bagger', 'One stock at +900%', 'テンバガー', '1銘柄が+900%'],
     hundredBagger: ['Hundred-Bagger', 'One stock at +9,900%', '100バガー', '1銘柄が+9,900%'],
     dividend100: ['Dividend Gourmet', 'Received 100 dividends', '配当の名店', '配当を100回受け取った'],
-    dividend10m: ['Dividend ₩10M', '₩10M in total dividends', '配当1千万', '配当の合計₩1,000万'],
-    dividend100m: ['Dividend ₩100M', '₩100M in total dividends', '配当1億', '配当の合計₩1億'],
+    dividend10m: ['Dividend ₩10M', '₩10M in total dividends', '配当₩1,000万', '配当の合計₩1,000万'],
+    dividend100m: ['Dividend ₩100M', '₩100M in total dividends', '配当₩1億', '配当の合計₩1億'],
 
     bagHolder: ['Mackerel Prep', 'A stock you bought halved (1/2 of average cost or less)', 'サバのさばき', '買った銘柄が半値（平均取得単価の1/2以下）'],
     bagHolder3: ['Hairtail Prep', 'A stock you bought fell to a third (1/3 of average cost or less)', 'タチウオのさばき', '買った銘柄が3分の1（平均取得単価の1/3以下）'],
@@ -1319,6 +1319,15 @@
   }
 
   // index.html의 data-i18n 표시를 채운다. data-i18n은 글자, -ph는 placeholder, -title은 title, -aria는 aria-label.
+  // 홈 화면에 추가할 때 쓰는 이름(iOS·Windows가 읽는 meta 두 줄)을 지금 언어로 맞춘다. manifest는 없다.
+  function applyHead() {
+    if (!inBrowser || typeof document.querySelector !== 'function') return;
+    for (const name of ['apple-mobile-web-app-title', 'application-name']) {
+      const m = document.querySelector(`meta[name="${name}"]`);
+      if (m) m.setAttribute('content', t('title'));
+    }
+  }
+
   function applyStatic(root) {
     const base = root || document;
     for (const el of base.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
@@ -1326,6 +1335,7 @@
     for (const el of base.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
     for (const el of base.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
     document.title = t('title');
+    applyHead();
   }
 
   function setLang(next, { reload = true } = {}) {
@@ -1336,6 +1346,8 @@
     I18N.lang = next;
     if (inBrowser) {
       document.documentElement.lang = next;
+      document.title = t('title');
+      applyHead();
       // 주소에 ?lang=이 남아 있으면 새로고침 뒤 옛 언어로 돌아가므로 고쳐 둔다.
       try {
         const url = new URL(globalThis.location.href);
@@ -1382,6 +1394,7 @@
   if (inBrowser) {
     document.documentElement.lang = lang;
     document.title = t('title');
+    applyHead();
   }
   globalThis.I18N = I18N;
   if (typeof module !== 'undefined') module.exports = I18N;
