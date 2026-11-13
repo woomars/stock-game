@@ -4,33 +4,37 @@
 <meta charset="utf-8">
 <title>10년 모의 투자</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-title" content="10-Year Mock Investing">
+<meta name="application-name" content="10-Year Mock Investing">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=f89b4ba501">
+<link rel="stylesheet" href="style.css?v=9d6d4f5654">
+<script src="js/names.js?v=91d26cc28f"></script>
+<script src="js/i18n.js?v=a16284405c"></script>
   <script src="https://woomars.github.io/count.js" defer></script>
 </head>
 <body>
 
 <div id="start" hidden>
   <div class="setup">
-    <h1>10년 모의 투자</h1>
+    <div class="setupHead"><h1 data-i18n="title">10년 모의 투자</h1><div class="langPick" id="langPick"></div></div>
     <form id="newGame">
-      <h4>새 게임</h4>
-      <div class="field"><label for="sKrw">초기 자금 (원화)</label><input id="sKrw" inputmode="numeric" value="100,000,000"></div>
-      <div class="field"><label for="sUsd">초기 자금 (달러)</label><input id="sUsd" inputmode="decimal" value="0"></div>
-      <div class="field"><label for="sMonthly">월 추가 투자금 (매월 첫 거래일, 원화)</label><input id="sMonthly" inputmode="numeric" value="1,000,000"></div>
-      <div class="field"><label for="sFx">환전 수수료 (%)</label><input id="sFx" inputmode="decimal" value="1.0"></div>
-      <div class="field"><label for="sTrade">주식 매매 수수료, 국내·해외 (%)</label><input id="sTrade" inputmode="decimal" value="0.1"></div>
-      <div class="field"><label for="sTax">증권거래세, 국내 주식 매도 시 (%)</label><input id="sTax" inputmode="decimal" value="0.2"></div>
-      <div class="field"><label for="sDate">시작일</label><input id="sDate" type="date" value="2016-11-07" style="width:150px"></div>
-      <button class="go primary" type="submit">게임 시작</button>
+      <h4 data-i18n="start.newGame">새 게임</h4>
+      <div class="field"><label for="sKrw" data-i18n="start.krw0">초기 자금 (원화)</label><input id="sKrw" inputmode="numeric" value="100,000,000"></div>
+      <div class="field"><label for="sUsd" data-i18n="start.usd0">초기 자금 (달러)</label><input id="sUsd" inputmode="decimal" value="0"></div>
+      <div class="field"><label for="sMonthly" data-i18n="start.monthly">월 추가 투자금 (매월 첫 거래일, 원화)</label><input id="sMonthly" inputmode="numeric" value="1,000,000"></div>
+      <div class="field"><label for="sFx" data-i18n="start.fxFee">환전 수수료 (%)</label><input id="sFx" inputmode="decimal" value="1.0"></div>
+      <div class="field"><label for="sTrade" data-i18n="start.tradeFee">주식 매매 수수료, 국내·해외 (%)</label><input id="sTrade" inputmode="decimal" value="0.1"></div>
+      <div class="field"><label for="sTax" data-i18n="start.tax">증권거래세, 국내 주식 매도 시 (%)</label><input id="sTax" inputmode="decimal" value="0.2"></div>
+      <div class="field"><label for="sDate" data-i18n="start.date">시작일</label><input id="sDate" type="date" value="2016-11-07" style="width:150px"></div>
+      <button class="go primary" type="submit" data-i18n="start.go">게임 시작</button>
       <p class="msg" id="sMsg"></p>
     </form>
     <div class="saves">
-      <h4>이어 하기</h4>
+      <h4 data-i18n="start.continue">이어 하기</h4>
       <div id="recent"></div>
-      <button class="go" id="loadFile" type="button">세이브 파일 불러오기</button>
-      <button class="go" id="historyStart" type="button">투자 기록 비교</button>
-      <button class="go" id="trophyStart" type="button">트로피와 메달</button>
+      <button class="go" id="loadFile" type="button" data-i18n="start.loadFile">세이브 파일 불러오기</button>
+      <button class="go" id="historyStart" type="button" data-i18n="start.history">투자 기록 비교</button>
+      <button class="go" id="trophyStart" type="button" data-i18n="start.trophy">트로피와 메달</button>
       <p class="msg" id="loadMsg"></p>
     </div>
   </div>
@@ -39,26 +43,26 @@
 <div id="game" hidden>
   <div class="top">
     <span class="date" id="tDate"></span>
-    <button class="btn" id="play" type="button">▶ 재생</button>
+    <button class="btn" id="play" type="button" data-i18n="play">▶ 재생</button>
     <span class="speed" id="speed">
       <button type="button" data-speed="1">1×</button><button type="button" data-speed="5" class="on">5×</button><button type="button" data-speed="20">20×</button><button type="button" data-speed="60">60×</button>
     </span>
-    <button class="btn" id="save" type="button">저장</button>
-    <button class="btn phoneOnly" id="moreBtn" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="topMenu">⋯</button>
+    <button class="btn" id="save" type="button" data-i18n="save">저장</button>
+    <button class="btn phoneOnly" id="moreBtn" type="button" aria-label="메뉴 열기" data-i18n-aria="menuOpen" aria-expanded="false" aria-controls="topMenu">⋯</button>
     <div class="topMenu" id="topMenu">
-    <button class="btn" id="exportBtn" type="button" title="저장 내용을 파일로 내려받아 백업합니다" hidden>파일로 내보내기</button>
-    <button class="btn" id="restart" type="button" title="같은 조건과 자동투자로 첫날부터 다시 합니다">다시 시작</button>
-    <button class="btn" id="newStart" type="button" title="설정 화면으로 돌아갑니다">새로 시작</button>
-    <button class="btn" id="reportBtn" type="button" hidden>보고서</button>
-    <button class="btn" id="historyBtn" type="button" title="끝낸 게임의 투자 보고서를 비교합니다">기록</button>
-    <button class="btn" id="trophyBtn" type="button" title="모은 트로피와 메달을 봅니다">트로피</button>
+    <button class="btn" id="exportBtn" type="button" title="저장 내용을 파일로 내려받아 백업합니다" data-i18n-title="exportFile.tip" data-i18n="exportFile" hidden>파일로 내보내기</button>
+    <button class="btn" id="restart" type="button" title="같은 조건과 자동투자로 첫날부터 다시 합니다" data-i18n-title="restart.tip" data-i18n="restart">다시 시작</button>
+    <button class="btn" id="newStart" type="button" title="설정 화면으로 돌아갑니다" data-i18n-title="newStart.tip" data-i18n="newStart">새로 시작</button>
+    <button class="btn" id="reportBtn" type="button" data-i18n="report" hidden>보고서</button>
+    <button class="btn" id="historyBtn" type="button" title="끝낸 게임의 투자 보고서를 비교합니다" data-i18n-title="historyBtn.tip" data-i18n="historyBtn">기록</button>
+    <button class="btn" id="trophyBtn" type="button" title="모은 트로피와 메달을 봅니다" data-i18n-title="trophyBtn.tip" data-i18n="trophyBtn">트로피</button>
     </div>
     <span class="stats">
-      <span class="stat"><small>총자산</small><b id="tTotal"></b></span>
-      <span class="stat"><small>손익</small><b id="tPnl"></b></span>
-      <span class="stat"><small>원화</small><b id="tKrw"></b></span>
+      <span class="stat"><small data-i18n="stat.total">총자산</small><b id="tTotal"></b></span>
+      <span class="stat"><small data-i18n="stat.pnl">손익</small><b id="tPnl"></b></span>
+      <span class="stat"><small data-i18n="stat.krw">원화</small><b id="tKrw"></b></span>
       <span class="stat"><small id="tFx"></small><b id="tUsd"></b></span>
-      <span class="stat"><small>채권</small><b id="tBond"></b></span>
+      <span class="stat"><small data-i18n="stat.bond">채권</small><b id="tBond"></b></span>
     </span>
   </div>
   <div class="body">
@@ -72,23 +76,23 @@
       </div>
     </div>
     <div class="right">
-      <div class="lockmsg">재생 중입니다. 멈추면 주문할 수 있습니다.</div>
+      <div class="lockmsg" data-i18n="lockmsg">재생 중입니다. 멈추면 주문할 수 있습니다.</div>
       <div class="tabs" id="tabs">
-        <button type="button" class="on" data-t="stock">주식</button><button type="button" data-t="fx">환전</button><button type="button" data-t="bond">채권</button><button type="button" data-t="auto">자동투자</button><button type="button" data-t="sell">매도 규칙</button><button type="button" class="phoneOnly" data-t="log">내역</button>
+        <button type="button" class="on" data-t="stock" data-i18n="tab.stock">주식</button><button type="button" data-t="fx" data-i18n="tab.fx">환전</button><button type="button" data-t="bond" data-i18n="tab.bond">채권</button><button type="button" data-t="auto" data-i18n="tab.auto">자동투자</button><button type="button" data-t="sell" data-i18n="tab.sell">매도 규칙</button><button type="button" class="phoneOnly" data-t="log" data-i18n="tab.log">내역</button>
       </div>
 
       <div class="pane on" id="p-stock">
         <div class="stockFilter">
-          <input id="stockSearch" type="search" placeholder="종목 검색" aria-label="종목 검색" autocomplete="off">
-          <div class="seg" id="stockBoard"><button type="button" class="neu on" data-board="all">전체</button><button type="button" class="neu" data-board="KOSPI">코스피</button><button type="button" class="neu" data-board="KOSDAQ">코스닥</button><button type="button" class="neu" data-board="US">미국</button></div>
+          <input id="stockSearch" type="search" placeholder="종목 검색" aria-label="종목 검색" data-i18n-ph="stock.search" data-i18n-aria="stock.search" autocomplete="off">
+          <div class="seg" id="stockBoard"><button type="button" class="neu on" data-board="all" data-i18n="board.all">전체</button><button type="button" class="neu" data-board="KOSPI" data-i18n="board.KOSPI">코스피</button><button type="button" class="neu" data-board="KOSDAQ" data-i18n="board.KOSDAQ">코스닥</button><button type="button" class="neu" data-board="US" data-i18n="board.US">미국</button></div>
         </div>
         <div class="scroll" id="stocks"></div>
         <div class="sec ord">
-          <div class="seg" id="side"><button type="button" class="buy on" data-side="buy">매수</button><button type="button" class="sell" data-side="sell">매도</button></div>
+          <div class="seg" id="side"><button type="button" class="buy on" data-side="buy" data-i18n="buy">매수</button><button type="button" class="sell" data-side="sell" data-i18n="sell">매도</button></div>
           <div class="field"><span id="oName"></span><span id="oPrice"></span></div>
-          <div class="field"><label for="oQty">수량 <button type="button" class="linkbtn" id="oAll" hidden>전량</button></label><input id="oQty" inputmode="numeric" value="1"></div>
-          <div class="field"><span>금액</span><span id="oAmt"></span></div>
-          <button class="go buy" id="oGo" type="button">매수</button>
+          <div class="field"><label for="oQty"><span data-i18n="order.qty">수량</span> <button type="button" class="linkbtn" id="oAll" data-i18n="order.all" hidden>전량</button></label><input id="oQty" inputmode="numeric" value="1"></div>
+          <div class="field"><span data-i18n="order.amount">금액</span><span id="oAmt"></span></div>
+          <button class="go buy" id="oGo" type="button" data-i18n="buy">매수</button>
           <p class="note" id="oFx"></p>
           <p class="msg" id="oMsg"></p>
         </div>
@@ -99,17 +103,17 @@
       <div class="pane" id="p-fx">
         <div class="scroll">
           <div class="sec">
-            <h5>오늘 환율</h5>
+            <h5 data-i18n="fx.today">오늘 환율</h5>
             <div class="big" id="fxSpot"></div>
             <p class="note" id="fxBal"></p>
           </div>
           <div class="sec ord">
-            <h5>지금 환전</h5>
-            <div class="seg" id="fxDir"><button type="button" class="neu on" data-dir="KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW">달러 → 원화</button></div>
-            <div class="field"><label for="fxUsd" id="fxUsdLabel">받을 달러</label><input id="fxUsd" inputmode="decimal" value="1,000"></div>
+            <h5 data-i18n="fx.now">지금 환전</h5>
+            <div class="seg" id="fxDir"><button type="button" class="neu on" data-dir="KRW_TO_USD" data-i18n="dir.KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW" data-i18n="dir.USD_TO_KRW">달러 → 원화</button></div>
+            <div class="field"><label for="fxUsd" id="fxUsdLabel" data-i18n="fx.receiveUsd">받을 달러</label><input id="fxUsd" inputmode="decimal" value="1,000"></div>
             <div class="field"><span id="fxRateLabel"></span><span id="fxRate"></span></div>
-            <div class="field"><span id="fxKrwLabel">나가는 원화</span><span id="fxKrw"></span></div>
-            <button class="go" id="fxGo" type="button">환전</button>
+            <div class="field"><span id="fxKrwLabel" data-i18n="fx.krwOut">나가는 원화</span><span id="fxKrw"></span></div>
+            <button class="go" id="fxGo" type="button" data-i18n="fx.go">환전</button>
             <p class="note" id="fxFee"></p>
             <p class="msg" id="fxMsg"></p>
           </div>
@@ -117,10 +121,10 @@
             <h5 id="foTitle"></h5>
             <div id="foList"></div>
             <div class="ord">
-              <div class="seg" id="foDir"><button type="button" class="neu on" data-dir="KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW">달러 → 원화</button></div>
-              <div class="field"><label for="foRate" id="foRateLabel">환율이 이 값 이하일 때</label><input id="foRate" inputmode="decimal" value="1,100"></div>
-              <div class="field"><label for="foUsd">금액 (달러)</label><input id="foUsd" inputmode="decimal" value="1,000"></div>
-              <button class="go" id="foGo" type="button">+ 예약 추가</button>
+              <div class="seg" id="foDir"><button type="button" class="neu on" data-dir="KRW_TO_USD" data-i18n="dir.KRW_TO_USD">원화 → 달러</button><button type="button" class="neu" data-dir="USD_TO_KRW" data-i18n="dir.USD_TO_KRW">달러 → 원화</button></div>
+              <div class="field"><label for="foRate" id="foRateLabel" data-i18n="fo.rateLte">환율이 이 값 이하일 때</label><input id="foRate" inputmode="decimal" value="1,100"></div>
+              <div class="field"><label for="foUsd" data-i18n="fo.amount">금액 (달러)</label><input id="foUsd" inputmode="decimal" value="1,000"></div>
+              <button class="go" id="foGo" type="button" data-i18n="fo.go">+ 예약 추가</button>
               <p class="msg" id="foMsg"></p>
             </div>
           </div>
@@ -130,12 +134,12 @@
       <div class="pane" id="p-bond">
         <div class="scroll">
           <div class="sec ord">
-            <h5>오늘 금리 (1년 만기)</h5>
+            <h5 data-i18n="bond.today">오늘 금리 (1년 만기)</h5>
             <div class="seg" id="bCountry"><button type="button" class="neu on" data-country="KR" id="bKr"></button><button type="button" class="neu" data-country="US" id="bUs"></button></div>
-            <div class="field"><label for="bAmt" id="bAmtLabel">넣을 금액</label><input id="bAmt" inputmode="decimal" value="1,000,000"></div>
+            <div class="field"><label for="bAmt" id="bAmtLabel" data-i18n="bond.amount">넣을 금액</label><input id="bAmt" inputmode="decimal" value="1,000,000"></div>
             <div class="field"><span id="bPayLabel"></span><span id="bPay"></span></div>
-            <button class="go" id="bGo" type="button">채권 매수</button>
-            <p class="note">만기까지 찾을 수 없고, 만기일에 원금과 이자가 해당 통화 계좌로 들어옵니다.</p>
+            <button class="go" id="bGo" type="button" data-i18n="bond.go">채권 매수</button>
+            <p class="note" data-i18n="bond.note">만기까지 찾을 수 없고, 만기일에 원금과 이자가 해당 통화 계좌로 들어옵니다.</p>
             <p class="msg" id="bMsg"></p>
           </div>
           <div class="sec">
@@ -148,17 +152,17 @@
       <div class="pane" id="p-auto">
         <div class="scroll">
           <div class="sec ord">
-            <h5 id="aFormTitle">새 자동투자</h5>
-            <div class="field"><label for="aStock">종목</label><select id="aStock"></select></div>
-            <div class="seg" id="aFreq"><button type="button" class="neu" data-freq="day">매일</button><button type="button" class="neu" data-freq="week">매주</button><button type="button" class="neu on" data-freq="month">매월</button><button type="button" class="neu" data-freq="year">매년</button></div>
-            <div class="field"><label for="aAmt" id="aAmtLabel">회차당 금액</label><input id="aAmt" inputmode="decimal" value="500,000"></div>
+            <h5 id="aFormTitle" data-i18n="auto.new">새 자동투자</h5>
+            <div class="field"><label for="aStock" data-i18n="auto.stock">종목</label><select id="aStock"></select></div>
+            <div class="seg" id="aFreq"><button type="button" class="neu" data-freq="day" data-i18n="freq.day">매일</button><button type="button" class="neu" data-freq="week" data-i18n="freq.week">매주</button><button type="button" class="neu on" data-freq="month" data-i18n="freq.month">매월</button><button type="button" class="neu" data-freq="year" data-i18n="freq.year">매년</button></div>
+            <div class="field"><label for="aAmt" id="aAmtLabel" data-i18n="auto.amount">회차당 금액</label><input id="aAmt" inputmode="decimal" value="500,000"></div>
             <div class="aBtns">
-              <button class="go" id="aGo" type="button">자동투자 추가</button>
-              <button class="go" id="aCancel" type="button" hidden>취소</button>
+              <button class="go" id="aGo" type="button" data-i18n="auto.add">자동투자 추가</button>
+              <button class="go" id="aCancel" type="button" data-i18n="cancel" hidden>취소</button>
             </div>
             <p class="msg" id="aMsg"></p>
             <p class="note" id="aListing"></p>
-            <p class="note">달러 계좌가 모자라면 원화 계좌에서 모자란 만큼 자동 환전합니다. 원화도 모자라면 그 회차는 건너뛰고 기록합니다. 재생을 누르면 시작합니다.</p>
+            <p class="note" data-i18n="auto.note">달러 계좌가 모자라면 원화 계좌에서 모자란 만큼 자동 환전합니다. 원화도 모자라면 그 회차는 건너뛰고 기록합니다. 재생을 누르면 시작합니다.</p>
           </div>
           <div class="sec">
             <h5 id="aTitle"></h5>
@@ -170,19 +174,19 @@
       <div class="pane" id="p-sell">
         <div class="scroll">
           <div class="sec ord">
-            <h5 id="rFormTitle">새 매도 규칙</h5>
-            <div class="field"><label for="rStock">종목</label><select id="rStock"></select></div>
-            <div class="seg" id="rOp"><button type="button" class="neu on" data-op="gte">수익률 이상</button><button type="button" class="neu" data-op="lte">수익률 이하</button></div>
-            <div class="field"><label for="rPct">평균 단가 대비 수익률 (%)</label><input id="rPct" inputmode="decimal" value="20"></div>
-            <div class="field"><label for="rQty">보유량 중 매도 비율 (%)</label><input id="rQty" inputmode="decimal" value="100"></div>
-            <div class="field"><label for="rTimes">실행 횟수</label><input id="rTimes" inputmode="numeric" value="1"></div>
-            <div class="field"><label for="rWait">대기 기간 (일)</label><input id="rWait" inputmode="numeric" value="0"></div>
+            <h5 id="rFormTitle" data-i18n="rule.new">새 매도 규칙</h5>
+            <div class="field"><label for="rStock" data-i18n="auto.stock">종목</label><select id="rStock"></select></div>
+            <div class="seg" id="rOp"><button type="button" class="neu on" data-op="gte" data-i18n="rule.opGte">수익률 이상</button><button type="button" class="neu" data-op="lte" data-i18n="rule.opLte">수익률 이하</button></div>
+            <div class="field"><label for="rPct" data-i18n="rule.pct">평균 단가 대비 수익률 (%)</label><input id="rPct" inputmode="decimal" value="20"></div>
+            <div class="field"><label for="rQty" data-i18n="rule.qty">보유량 중 매도 비율 (%)</label><input id="rQty" inputmode="decimal" value="100"></div>
+            <div class="field"><label for="rTimes" data-i18n="rule.times">실행 횟수</label><input id="rTimes" inputmode="numeric" value="1"></div>
+            <div class="field"><label for="rWait" data-i18n="rule.wait">대기 기간 (일)</label><input id="rWait" inputmode="numeric" value="0"></div>
             <div class="aBtns">
-              <button class="go" id="rGo" type="button">매도 규칙 추가</button>
-              <button class="go" id="rCancel" type="button" hidden>취소</button>
+              <button class="go" id="rGo" type="button" data-i18n="rule.add">매도 규칙 추가</button>
+              <button class="go" id="rCancel" type="button" data-i18n="cancel" hidden>취소</button>
             </div>
             <p class="msg" id="rMsg"></p>
-            <p class="note">다음 거래일부터 그날 종가로 판단합니다. 규칙을 만든 날이나 직전 매도일에서 대기 기간이 지나고 조건이 맞으면 팝니다. 정한 횟수를 다 채우면 실행됨으로 바뀌고, 다시 시작을 누르면 처음부터 새로 합니다.</p>
+            <p class="note" data-i18n="rule.note">다음 거래일부터 그날 종가로 판단합니다. 규칙을 만든 날이나 직전 매도일에서 대기 기간이 지나고 조건이 맞으면 팝니다. 정한 횟수를 다 채우면 실행됨으로 바뀌고, 다시 시작을 누르면 처음부터 새로 합니다.</p>
           </div>
           <div class="sec">
             <h5 id="rTitle"></h5>
@@ -197,8 +201,8 @@
 
 <div id="trophyRoom" hidden>
   <div class="roomHead">
-    <button class="btn" id="roomBack" type="button">← 돌아가기</button>
-    <h2>트로피와 메달</h2>
+    <button class="btn" id="roomBack" type="button" data-i18n="room.back">← 돌아가기</button>
+    <h2 data-i18n="room.title">트로피와 메달</h2>
     <span class="roomTotal" id="roomTotal"></span>
   </div>
   <div class="tabs" id="roomTabs">
@@ -208,52 +212,52 @@
 </div>
 
 <div id="toasts" aria-live="polite"></div>
-<div id="rotateNotice"><b>세로 화면으로 돌려 주세요</b><span>이 게임은 핸드폰 세로 화면에 맞춰져 있습니다. 진행 상황은 그대로입니다.</span></div>
+<div id="rotateNotice"><b data-i18n="rotateTitle">세로 화면으로 돌려 주세요</b><span data-i18n="rotateText">이 게임은 핸드폰 세로 화면에 맞춰져 있습니다. 진행 상황은 그대로입니다.</span></div>
 
 <div class="dialog" id="records" hidden>
   <div>
-    <h3>투자 기록</h3>
-    <p class="note">끝까지 진행한 게임의 보고서가 저절로 남습니다. 이 기기의 이 브라우저에만 저장됩니다.</p>
+    <h3 data-i18n="records.title">투자 기록</h3>
+    <p class="note" data-i18n="records.note">끝까지 진행한 게임의 보고서가 저절로 남습니다. 이 기기의 이 브라우저에만 저장됩니다.</p>
     <div class="reportBody" id="recordsBody"></div>
     <p class="msg" id="recordsMsg"></p>
     <div class="reportBtns">
-      <button class="go primary" id="compareBtn" type="button">투자 기록 비교 리포트</button>
-      <button class="go" id="recordsClose" type="button">닫기</button>
+      <button class="go primary" id="compareBtn" type="button" data-i18n="records.compare">투자 기록 비교 리포트</button>
+      <button class="go" id="recordsClose" type="button" data-i18n="close">닫기</button>
     </div>
   </div>
 </div>
 
 <div class="dialog" id="compare" hidden>
   <div>
-    <h3>투자 기록 비교 리포트</h3>
+    <h3 data-i18n="cmp.title">투자 기록 비교 리포트</h3>
     <div class="reportBody" id="compareBody"></div>
-    <div class="reportBtns"><button class="go" id="compareClose" type="button">닫기</button></div>
+    <div class="reportBtns"><button class="go" id="compareClose" type="button" data-i18n="close">닫기</button></div>
   </div>
 </div>
 
 <div class="dialog" id="summary" hidden>
   <div>
-    <h3>투자 보고서</h3>
+    <h3 data-i18n="summary.title">투자 보고서</h3>
     <p class="note" id="summaryPeriod"></p>
     <p class="note" id="summaryNote"></p>
     <div class="reportBody" id="summaryRows"></div>
     <div class="reportBtns">
-      <button class="go" id="summarySave" type="button">저장</button>
-      <button class="go" id="summaryRestart" type="button">다시 시작</button>
-      <button class="go" id="summaryNew" type="button">새로 시작</button>
-      <button class="go" id="summaryClose" type="button">닫기</button>
+      <button class="go" id="summarySave" type="button" data-i18n="save">저장</button>
+      <button class="go" id="summaryRestart" type="button" data-i18n="restart">다시 시작</button>
+      <button class="go" id="summaryNew" type="button" data-i18n="newStart">새로 시작</button>
+      <button class="go" id="summaryClose" type="button" data-i18n="close">닫기</button>
     </div>
   </div>
 </div>
 
 <script src="data.js?v=c66d6c8d7f"></script>
 <script src="js/engine.js?v=b0678b8983"></script>
-<script src="js/format.js?v=1f972c151d"></script>
-<script src="js/saves.js?v=23e1c75daa"></script>
-<script src="js/records.js?v=f0c71fb0e5"></script>
+<script src="js/format.js?v=e71f9d5957"></script>
+<script src="js/saves.js?v=dbb241cfb3"></script>
+<script src="js/records.js?v=c3d6a0f7fe"></script>
 <script src="js/achievements.js?v=24002e5047"></script>
-<script src="js/chart.js?v=ebdfaeed80"></script>
-<script src="js/ui.js?v=a56f37802d"></script>
-<script src="js/tabs.js?v=600c30e9ca"></script>
+<script src="js/chart.js?v=71fefe6ab4"></script>
+<script src="js/ui.js?v=d498cd8dcb"></script>
+<script src="js/tabs.js?v=e791b1ece9"></script>
 </body>
 </html>

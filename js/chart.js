@@ -39,7 +39,7 @@
     const out = [];
     for (let i = fromIdx + 1; i <= toIdx; i += 1) {
       if (dates[i].slice(0, 7) !== dates[i - 1].slice(0, 7)) {
-        out.push({ idx: i, label: dates[i].slice(0, 7).replace('-', '.') });
+        out.push({ idx: i, label: dates[i].slice(0, 7).replace('-', globalThis.Format ? Format.dateSep() : '.') });
       }
     }
     return out;

@@ -2,6 +2,8 @@
 (function () {
   const data = globalThis.GAME_DATA;
   const $ = (id) => document.getElementById(id);
+  const { t } = I18N;
+  const nameOf = (stock) => I18N.stockName(stock);
   const COLOR = { mine: '#B5851A', kospi: '#2FA5B3', sp: '#9C7BEF' };
   const FRAME_MS = 33;
   const MAX_FRAME_GAP_MS = 250;
@@ -45,7 +47,7 @@
     UI.setText(pnl, `${Format.krwSignedShort(v.pnl)} (${Format.pct(v.pnlPct)})`);
     pnl.className = UI.signClass(v.pnl);
     UI.setText($('tKrw'), Format.krwShort(v.krw));
-    UI.setText($('tFx'), `달러 · ${Math.round(data.fx[s.dayIdx]).toLocaleString('en-US')}원`);
+    UI.setText($('tFx'), t('stat.usd', { rate: I18N.lang === 'ko' ? Math.round(data.fx[s.dayIdx]).toLocaleString('en-US') : Format.rateWhole(data.fx[s.dayIdx]) }));
     UI.setText($('tUsd'), Format.usd(Math.round(v.usd)));
     UI.setText($('tBond'), Format.krwShort(v.bondKrw));
     const ended = s.dayIdx >= data.dates.length - 1;
@@ -87,14 +89,33 @@
     return out.sort((a, b) => (a.kind === 'auto' ? -1 : 0) - (b.kind === 'auto' ? -1 : 0));
   }
 
+  // 그래프 표시(B·S·•) 설명과 각주.
+  function markLegend(note) {
+    const out = [];
+    for (const [mark, cls, key] of [['B', 'up', 'chart.markBuy'], ['S', 'down', 'chart.markSell'], ['•', 'up', 'chart.markAuto']]) {
+      const span = document.createElement('span');
+      const mk = document.createElement('span');
+      mk.className = `mk ${cls}`;
+      mk.textContent = mark;
+      span.append(mk, ` ${t(key)}`);
+      out.push(span);
+    }
+    const n = document.createElement('span');
+    n.className = 'note';
+    n.textContent = note;
+    out.push(n);
+    return out;
+  }
+
   function drawMainChart() {
     const s = UI.state;
     const h = s.history;
     const k = h.pnl.length - 1;
     UI.setText($('crumb'), '');
-    $('crumb').innerHTML = '<h4>내 손익</h4>';
+    $('crumb').innerHTML = '';
+    $('crumb').append(Object.assign(document.createElement('h4'), { textContent: t('chart.myPnl') }));
     const legendItems = [
-      ['내 투자', COLOR.mine, h.pnl[k]], ['코스피에 넣었다면', COLOR.kospi, h.kospi[k]], ['S&P 500에 넣었다면', COLOR.sp, h.sp[k]],
+      [t('chart.mine'), COLOR.mine, h.pnl[k]], [t('chart.ifKospi'), COLOR.kospi, h.kospi[k]], [t('chart.ifSp'), COLOR.sp, h.sp[k]],
     ];
     const legend = $('legend');
     legend.innerHTML = '';
@@ -107,8 +128,7 @@
       span.append(swatch, `${name} `, b);
       legend.append(span);
     }
-    legend.insertAdjacentHTML('beforeend',
-      '<span><span class="mk up">B</span> 매수</span><span><span class="mk down">S</span> 매도</span><span><span class="mk up">•</span> 자동투자</span><span class="note">지수는 배당 제외 가격지수</span>');
+    legend.append(...markLegend(t('chart.noteMain')));
     Chart.render($('chart'), {
       dates: data.dates,
       fromIdx: s.startIdx,
@@ -134,14 +154,14 @@
     crumb.innerHTML = '';
     const back = document.createElement('button');
     back.type = 'button';
-    back.textContent = '← 내 손익';
+    back.textContent = t('chart.back');
     back.addEventListener('click', () => UI.showStock(null));
     const title = document.createElement('h4');
-    title.textContent = stock.name;
+    title.textContent = nameOf(stock);
     const now = document.createElement('span');
     const listing = Engine.listingIdx(data, i);
     now.textContent = price == null
-      ? `상장 전 · ${listing < 0 ? '' : `${Format.date(data.dates[listing])} 상장`}`
+      ? t('chart.preListing', { date: listing < 0 ? '' : t('chart.listedOn', { date: Format.date(data.dates[listing]) }) })
       : `${Format.price(stock, price)} `;
     if (change != null) now.append(changeNode(change));
     crumb.append(back, title, now);
@@ -152,9 +172,9 @@
     const hold = document.createElement('span');
     if (h) {
       const rate = price == null ? 0 : (price / h.avgCost - 1) * 100;
-      hold.textContent = `보유 ${Format.qty(h.qty)}주 · 평균 ${Format.price(stock, h.avgCost)} · ${Format.pct(rate)}`;
+      hold.textContent = t('chart.hold', { qty: Format.qty(h.qty), n: h.qty, avg: Format.price(stock, h.avgCost), pct: Format.pct(rate) });
     } else {
-      hold.textContent = '보유 없음';
+      hold.textContent = t('chart.noHold');
     }
     legend.append(hold);
 
@@ -176,7 +196,7 @@
     const kospiLine = rebased(kospiAt);
     const spLine = rebased(spAt);
     const growth = (line) => (line[line.length - 1] / line[firstAt] - 1) * 100;
-    for (const [name, color, line] of [['코스피', COLOR.kospi, kospiLine], ['S&P 500', COLOR.sp, spLine]]) {
+    for (const [name, color, line] of [[t('chart.kospi'), COLOR.kospi, kospiLine], [t('chart.sp'), COLOR.sp, spLine]]) {
       const item = document.createElement('span');
       const swatch = document.createElement('i');
       swatch.style.background = color;
@@ -185,8 +205,7 @@
       item.append(swatch, `${name} `, b);
       legend.append(item);
     }
-    legend.insertAdjacentHTML('beforeend',
-      '<span><span class="mk up">B</span> 매수</span><span><span class="mk down">S</span> 매도</span><span><span class="mk up">•</span> 자동투자</span><span class="note">지수는 첫날 주가와 같은 출발점으로 환산</span>');
+    legend.append(...markLegend(t('chart.noteStock')));
     const yFormat = stock.currency === 'USD'
       ? (v) => `$${Math.round(v).toLocaleString('en-US')}`
       : (v) => Math.round(v).toLocaleString('en-US');
@@ -217,20 +236,20 @@
     const k = idx - s.startIdx;
     const lines = [];
     if (UI.view === null) {
-      lines.push(`내 투자 ${Format.krwSignedShort(s.history.pnl[k])}`);
-      lines.push(`코스피 ${Format.krwSignedShort(s.history.kospi[k])}`);
-      lines.push(`S&P 500 ${Format.krwSignedShort(s.history.sp[k])}`);
+      lines.push(`${t('chart.mine')} ${Format.krwSignedShort(s.history.pnl[k])}`);
+      lines.push(`${t('chart.kospi')} ${Format.krwSignedShort(s.history.kospi[k])}`);
+      lines.push(`${t('chart.sp')} ${Format.krwSignedShort(s.history.sp[k])}`);
     } else {
       const stock = data.stocks[UI.view];
       const price = Engine.lastClose(data, UI.view, idx);
-      lines.push(`종가 ${price == null ? '상장 전' : Format.price(stock, price)}`);
+      lines.push(t('chart.close', { price: price == null ? t('stock.notListed') : Format.price(stock, price) }));
     }
     const shown = s.events.filter((e) => e.d === idx && (UI.view === null || e.stockIdx === UI.view));
     for (const e of shown.slice(0, 4)) {
       const line = Format.eventLine(data, e);
       lines.push(`${line.label} ${line.text}`);
     }
-    if (shown.length > 4) lines.push(`외 ${shown.length - 4}건`);
+    if (shown.length > 4) lines.push(t('chart.more', { n: shown.length - 4 }));
     return lines;
   }
 
@@ -303,7 +322,7 @@
       row.dataset.i = i;
       const name = document.createElement('span');
       name.className = 'nm';
-      name.textContent = stock.name;
+      name.textContent = nameOf(stock);
       const hold = document.createElement('small');
       hold.style.display = 'block';
       name.append(hold);
@@ -344,7 +363,8 @@
   function computeFilterHit(i) {
     const stock = data.stocks[i];
     if (stockFilter.board !== 'all' && stock.board !== stockFilter.board) return false;
-    return !stockFilter.query || stock.name.toLowerCase().includes(stockFilter.query) || stock.id.toLowerCase().includes(stockFilter.query);
+    const q = stockFilter.query;
+    return !q || stock.name.toLowerCase().includes(q) || nameOf(stock).toLowerCase().includes(q) || stock.id.toLowerCase().includes(q);
   }
 
   function matchesFilter(i) {
@@ -362,13 +382,13 @@
     const change = dayChange(i);
     let label = '';
     let cls = '';
-    if (price == null) label = '상장 전';
-    else if (!status.ok) label = status.reason;
+    if (price == null) label = t('stock.notListed');
+    else if (!status.ok) label = I18N.msg(status.reason);
     else if (change != null) { label = Format.pct(change); cls = UI.signClass(change); }
     UI.setText(r.change, label);
     if (r.change.className !== cls) r.change.className = cls;
     const h = s.holdings[i];
-    UI.setText(r.hold, h ? `${Format.qty(h.qty)}주 보유` : '');
+    UI.setText(r.hold, h ? t('stock.held', { qty: Format.qty(h.qty), n: h.qty }) : '');
     const on = UI.selected === i && UI.view === i;
     if (r.row.classList.contains('on') !== on) r.row.classList.toggle('on', on);
   }
@@ -389,7 +409,7 @@
     const noHoldings = selling && !Object.keys(s.holdings).length;
     const none = noHoldings || !rows.some((_, i) => matchesFilter(i) && (!selling || s.holdings[i]));
     if (empty.hidden === none) empty.hidden = !none;
-    UI.setText(empty, noHoldings ? '보유한 주식이 없습니다.' : '조건에 맞는 종목이 없습니다.');
+    UI.setText(empty, noHoldings ? t('stock.noHoldings') : t('stock.noMatch'));
     rows.forEach((r, i) => {
       const hide = (selling && !s.holdings[i]) || !matchesFilter(i);
       if (r.row.hidden !== hide) r.row.hidden = hide;
@@ -410,8 +430,8 @@
     const stock = data.stocks[i];
     const status = Engine.tradeStatus(data, s, i);
     const price = stock.close[s.dayIdx];
-    UI.setText($('oName'), stock.name);
-    UI.setText($('oPrice'), status.ok ? Format.price(stock, price) : status.reason);
+    UI.setText($('oName'), nameOf(stock));
+    UI.setText($('oPrice'), status.ok ? Format.price(stock, price) : I18N.msg(status.reason));
     const qty = orderQty();
     const valid = status.ok && Number.isFinite(qty) && qty > 0;
     let amount = '-';
@@ -425,13 +445,13 @@
     let fxNote = '';
     if (fx) {
       fxNote = fx.enough
-        ? `달러 부족분 ${Format.usd(fx.usd)}를 원화 ${Format.krw(fx.krw)}으로 자동 환전합니다.`
-        : `달러 부족분 ${Format.usd(fx.usd)}를 환전할 원화가 모자랍니다.`;
+        ? t('order.fxAuto', { usd: Format.usd(fx.usd), krw: Format.krw(fx.krw) })
+        : t('order.fxShort', { usd: Format.usd(fx.usd) });
     }
     UI.setText($('oFx'), fxNote);
     const go = $('oGo');
     go.className = `go ${UI.side}`;
-    UI.setText(go, UI.side === 'buy' ? '매수' : '매도');
+    UI.setText(go, UI.side === 'buy' ? t('buy') : t('sell'));
     $('oAll').hidden = UI.side !== 'sell' || !s.holdings[i];
     go.disabled = UI.playing || !status.ok || (UI.side === 'sell' && !s.holdings[i]);
   }
@@ -443,14 +463,14 @@
     const r = UI.side === 'buy'
       ? Engine.buy(data, UI.state, UI.selected, qty)
       : Engine.sell(data, UI.state, UI.selected, qty);
-    UI.setText(msg, r.ok ? '' : r.reason);
+    UI.setText(msg, r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) UI.refresh();
   }
 
   function sellAll() {
     if (UI.playing) return;
     const r = Engine.sell(data, UI.state, UI.selected, 'all');
-    UI.setText($('oMsg'), r.ok ? '' : r.reason);
+    UI.setText($('oMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) UI.refresh();
   }
 
@@ -498,7 +518,7 @@
       if (!events.length && !log.firstChild) {
         const none = document.createElement('div');
         none.className = 'none';
-        none.textContent = '아직 기록이 없습니다.';
+        none.textContent = t('log.none');
         log.append(none);
       }
       return;
@@ -568,12 +588,12 @@
 
   function announceMedals(ids) {
     if (ids.length > TOAST_LIMIT) {
-      toast('🏅', '메달 획득', `${ids.length}개를 한꺼번에 받았습니다`);
+      toast('🏅', t('toast.medal'), t('toast.many', { n: ids.length }));
       return;
     }
     for (const id of ids) {
       const m = MEDAL_BY_ID.get(id);
-      toast(m.icon, '메달 획득', m.name);
+      toast(m.icon, t('toast.medal'), I18N.achName(m));
     }
   }
 
@@ -601,21 +621,21 @@
   }
 
   function trophySection() {
-    const nodes = [section('이번 판 트로피')];
+    const nodes = [section(t('trophy.thisGame'))];
     if (!thisGameTrophies.eligible) {
       const p = document.createElement('p');
       p.className = 'note';
-      p.textContent = '투자 기간이 5년 이상인 판만 트로피를 받습니다.';
+      p.textContent = t('trophy.tooShort');
       nodes.push(p);
       return nodes;
     }
     const chips = document.createElement('div');
     chips.className = 'chips';
-    for (const t of Achievements.TROPHIES.filter((x) => thisGameTrophies.ids.includes(x.id))) {
+    for (const tr of Achievements.TROPHIES.filter((x) => thisGameTrophies.ids.includes(x.id))) {
       const chip = document.createElement('span');
       chip.className = 'chip';
-      chip.textContent = `${t.icon || Achievements.TIER_ICON[t.tier]} ${t.name}`;
-      chip.title = t.desc;
+      chip.textContent = `${tr.icon || Achievements.TIER_ICON[tr.tier]} ${I18N.achName(tr)}`;
+      chip.title = I18N.achDesc(tr);
       chips.append(chip);
     }
     nodes.push(chips);
@@ -636,9 +656,9 @@
     ic.className = 'ic';
     ic.textContent = icon;
     const name = document.createElement('b');
-    name.textContent = item.name;
+    name.textContent = I18N.achName(item);
     const desc = document.createElement('small');
-    desc.textContent = item.desc;
+    desc.textContent = I18N.achDesc(item);
     box.append(ic, name, desc);
     return box;
   }
@@ -647,13 +667,13 @@
     const store = UI.achievements;
     const c = Achievements.counts(store);
     const total = $('roomTotal');
-    total.textContent = '수집 ';
+    total.textContent = t('room.collected');
     const b = document.createElement('b');
     b.textContent = c.collected;
     total.append(b, ` / ${c.total}`);
     for (const btn of $('roomTabs').children) {
       btn.classList.toggle('on', btn.dataset.k === roomTab);
-      btn.textContent = btn.dataset.k === 'trophy' ? `트로피 ${c.trophies}/${c.trophyTotal}` : `메달 ${c.medals}/${c.medalTotal}`;
+      btn.textContent = btn.dataset.k === 'trophy' ? t('room.trophies', { n: c.trophies, total: c.trophyTotal }) : t('room.medals', { n: c.medals, total: c.medalTotal });
     }
     const list = roomTab === 'trophy' ? Achievements.TROPHIES : Achievements.MEDALS;
     const groups = [...new Set(list.map((x) => x.group))];
@@ -664,9 +684,9 @@
       const head = document.createElement('div');
       head.className = 'roomSec';
       const name = document.createElement('span');
-      name.textContent = group;
+      name.textContent = I18N.achGroup(group);
       const size = document.createElement('span');
-      size.textContent = `${items.length}종`;
+      size.textContent = t('room.kinds', { n: items.length });
       head.append(name, size);
       const grid = document.createElement('div');
       grid.className = 'roomGrid';
@@ -762,7 +782,7 @@
       UI.refresh();
     }
     UI.playing = true;
-    $('play').textContent = '❚❚ 멈춤';
+    $('play').textContent = t('pause');
     setLocked(true);
     lastFrame = performance.now();
     carry = 0;
@@ -772,7 +792,7 @@
   UI.pause = function () {
     UI.playing = false;
     cancelAnimationFrame(rafId);
-    $('play').textContent = '▶ 재생';
+    $('play').textContent = t('play');
     setLocked(false);
     UI.refresh();
   };
@@ -812,7 +832,7 @@
     showGame();
     resetLog();
     setLocked(false);
-    $('play').textContent = '▶ 재생';
+    $('play').textContent = t('play');
     UI.refresh();
     UI.relock();
   };
@@ -838,15 +858,14 @@
   function reportNote() {
     const p = document.createElement('p');
     p.className = 'note';
-    p.textContent = '원금 대비는 넣은 돈 전체에 대한 비율이고, 연환산은 돈이 들어가고 나온 날짜를 반영한 연 수익률(XIRR)입니다. '
-      + '기간이 30일 미만이면 표시하지 않습니다. 달러 종목은 환율을 뺀 달러 기준입니다. 지수는 배당을 뺀 가격지수입니다.';
+    p.textContent = t('summary.note');
     return p;
   }
 
   function stockTable(report) {
     const table = document.createElement('table');
     const head = table.insertRow();
-    for (const name of ['종목', '산 금액', '판 금액', '배당', '평가액', '손익', '원금 대비', '연환산']) {
+    for (const name of ['stock', 'bought', 'sold', 'dividends', 'value', 'pnl', 'pct', 'annual'].map((k) => t(`col.${k}`))) {
       const th = document.createElement('th');
       th.textContent = name;
       head.append(th);
@@ -855,7 +874,7 @@
       const stock = r.name ? r : data.stocks[r.stockIdx];
       const tr = table.insertRow();
       const m = (v) => Format.money(v, stock.currency);
-      [stock.name, m(r.bought), m(r.sold), m(r.dividends), m(r.value)].forEach((t) => { tr.insertCell().textContent = t; });
+      [r.name ? I18N.storedStockName(r.name) : nameOf(stock), m(r.bought), m(r.sold), m(r.dividends), m(r.value)].forEach((t) => { tr.insertCell().textContent = t; });
       const pnl = tr.insertCell();
       pnl.textContent = stock.currency === 'USD' ? Format.usdSigned(r.pnl) : Format.krwSigned(r.pnl);
       pnl.className = UI.signClass(r.pnl);
@@ -886,38 +905,38 @@
   UI.showReport = function (record) {
     const saved = record && record.report ? record : null;
     const r = saved ? saved.report : Engine.report(data, UI.state);
-    UI.setText($('summaryNote'), saved ? `${saved.name} · 저장된 보고서` : '');
+    UI.setText($('summaryNote'), saved ? t('summary.savedNote', { name: I18N.recordName(saved.name) }) : '');
     for (const id of ['summarySave', 'summaryRestart', 'summaryNew']) $(id).hidden = Boolean(saved);
     const share = (v) => `${Format.krw(v)} (${r.total > 0 ? (v / r.total * 100).toFixed(1) : '0.0'}%)`;
     const signed = (v) => summaryRowValue(v);
-    const annual = (v) => (v === null ? '연 -' : `연 ${Format.pct(v)}`);
+    const annual = (v) => t('annual', { pct: v === null ? '-' : Format.pct(v) });
     const withReturns = (pnl, pct, yearly) => [`${Format.krwSigned(pnl)} (${Format.pct(pct)}, ${annual(yearly)})`, UI.signClass(pnl)];
-    UI.setText($('summaryPeriod'), `${Format.date(r.startDate)} ~ ${Format.date(r.endDate)}`);
+    UI.setText($('summaryPeriod'), t('range', { from: Format.date(r.startDate), to: Format.date(r.endDate) }));
     $('summaryRows').replaceChildren(
       ...(!saved && thisGameTrophies ? trophySection() : []),
-      section('결과'),
-      summaryRow('최종 자산', Format.krw(r.total)),
-      summaryRow('넣은 돈', Format.krw(r.contributed)),
-      summaryRow('손익', ...withReturns(r.pnl, r.pnlPct, r.annualPct)),
-      summaryRow('코스피에 넣었다면', ...withReturns(r.kospiPnl, r.kospiPct, r.kospiAnnualPct)),
-      summaryRow('S&P 500에 넣었다면', ...withReturns(r.spPnl, r.spPct, r.spAnnualPct)),
-      summaryRow('코스피와 차이', ...signed(r.vsKospi)),
-      summaryRow('S&P 500과 차이', ...signed(r.vsSp)),
-      summaryRow(`가장 높았던 손익 (${Format.date(r.best.date)})`, ...signed(r.best.pnl)),
-      summaryRow(`가장 낮았던 손익 (${Format.date(r.worst.date)})`, ...signed(r.worst.pnl)),
-      section('자산 구성'),
-      summaryRow('원화', share(r.assets.krw)),
-      summaryRow('달러 (원화 환산)', share(r.assets.usdKrw)),
-      summaryRow('채권', share(r.assets.bondKrw)),
-      summaryRow('주식', share(r.assets.stockKrw)),
-      section('매매 요약'),
-      summaryRow('수동 매수 · 매도', `${r.counts.buys}회 · ${r.counts.sells}회`),
-      summaryRow('자동투자 체결 · 건너뜀', `${r.counts.autoBuys}회 · ${r.counts.skips}회`),
-      summaryRow('받은 배당', Format.krw(r.dividendsKrw)),
-      summaryRow('받은 채권 이자', Format.krw(r.interestKrw)),
-      summaryRow('낸 환전 수수료', Format.krw(r.fxFeesKrw)),
-      summaryRow('낸 매매 수수료 · 거래세', Format.krw(r.tradeFeesKrw)),
-      section('종목별 손익'),
+      section(t('summary.result')),
+      summaryRow(t('summary.total'), Format.krw(r.total)),
+      summaryRow(t('summary.contributed'), Format.krw(r.contributed)),
+      summaryRow(t('summary.pnl'), ...withReturns(r.pnl, r.pnlPct, r.annualPct)),
+      summaryRow(t('chart.ifKospi'), ...withReturns(r.kospiPnl, r.kospiPct, r.kospiAnnualPct)),
+      summaryRow(t('chart.ifSp'), ...withReturns(r.spPnl, r.spPct, r.spAnnualPct)),
+      summaryRow(t('summary.vsKospi'), ...signed(r.vsKospi)),
+      summaryRow(t('summary.vsSp'), ...signed(r.vsSp)),
+      summaryRow(t('summary.best', { date: Format.date(r.best.date) }), ...signed(r.best.pnl)),
+      summaryRow(t('summary.worst', { date: Format.date(r.worst.date) }), ...signed(r.worst.pnl)),
+      section(t('summary.assets')),
+      summaryRow(t('summary.krw'), share(r.assets.krw)),
+      summaryRow(t('summary.usdKrw'), share(r.assets.usdKrw)),
+      summaryRow(t('summary.bond'), share(r.assets.bondKrw)),
+      summaryRow(t('summary.stock'), share(r.assets.stockKrw)),
+      section(t('summary.trades')),
+      summaryRow(t('summary.manual'), t('summary.twoCounts', { a: r.counts.buys, b: r.counts.sells })),
+      summaryRow(t('summary.autoRuns'), t('summary.twoCounts', { a: r.counts.autoBuys, b: r.counts.skips })),
+      summaryRow(t('summary.dividends'), Format.krw(r.dividendsKrw)),
+      summaryRow(t('summary.interest'), Format.krw(r.interestKrw)),
+      summaryRow(t('summary.fxFees'), Format.krw(r.fxFeesKrw)),
+      summaryRow(t('summary.tradeFees'), Format.krw(r.tradeFeesKrw)),
+      section(t('summary.byStock')),
       stockTable(r),
       reportNote(),
     );
@@ -934,9 +953,9 @@
       const name = Records.nextName(records);
       const createdAt = new Date().toISOString();
       await Saves.putRecord(Records.make(data, UI.state, { id: `rec-${Date.now()}`, name, createdAt }));
-      UI.setText($('summaryNote'), `${name}로 기록에 남겼습니다.`);
+      UI.setText($('summaryNote'), t('summary.recorded', { name: I18N.recordName(name) }));
     } catch {
-      UI.setText($('summaryNote'), '기록을 남기지 못했습니다.');
+      UI.setText($('summaryNote'), t('summary.recordFailed'));
     }
   };
 
@@ -952,18 +971,18 @@
     try {
       records = await Saves.listRecords();
     } catch {
-      body.textContent = '이 브라우저에서는 기록을 읽을 수 없습니다.';
+      body.textContent = t('records.cantRead');
       return;
     }
     if (!records.length) {
-      body.textContent = '아직 기록이 없습니다. 마지막 날까지 진행하면 남습니다.';
+      body.textContent = t('records.none');
       return;
     }
     shownRecords = records;
     const best = Records.bestId(records);
     const table = document.createElement('table');
     const head = table.createTHead().insertRow();
-    for (const name of ['', '이름', '기간', '넣은 돈', '최종 자산', '손익', '원금 대비', '연환산', '코스피 연환산', 'S&P 500 연환산', '매매(수동·자동)', '수수료', '조건', '']) {
+    for (const name of ['', ...['name', 'period', 'contributed', 'total', 'pnl', 'pct', 'annual', 'kospiAnnual', 'spAnnual', 'trades', 'fees', 'settings'].map((k) => t(`col.${k}`)), '']) {
       const th = document.createElement('th');
       th.textContent = name;
       head.append(th);
@@ -976,7 +995,7 @@
       const pick = document.createElement('input');
       pick.type = 'checkbox';
       pick.className = 'pickRec';
-      pick.setAttribute('aria-label', `${rec.name} 비교에 넣기`);
+      pick.setAttribute('aria-label', t('records.pick', { name: I18N.recordName(rec.name) }));
       pick.checked = !leftOut.has(rec.id);
       pick.addEventListener('change', () => {
         if (pick.checked) leftOut.delete(rec.id);
@@ -985,15 +1004,15 @@
       });
       tr.insertCell().append(pick);
       const name = tr.insertCell();
-      name.textContent = rec.name;
+      name.textContent = I18N.recordName(rec.name);
       if (rec.id === best) {
         const mark = document.createElement('span');
         mark.className = 'bestMark';
-        mark.textContent = '최고';
+        mark.textContent = t('records.best');
         name.append(mark);
       }
       const cells = [
-        `${Format.date(r.startDate)} ~ ${Format.date(r.endDate)}`, Format.krwShort(r.contributed), Format.krwShort(r.total),
+        t('range', { from: Format.date(r.startDate), to: Format.date(r.endDate) }), Format.krwShort(r.contributed), Format.krwShort(r.total),
       ];
       for (const text of cells) tr.insertCell().textContent = text;
       const signed = (text, v) => { const c = tr.insertCell(); c.textContent = text; c.className = UI.signClass(v); };
@@ -1002,15 +1021,16 @@
       signed(annual(r.annualPct), r.annualPct || 0);
       signed(annual(r.kospiAnnualPct), r.kospiAnnualPct || 0);
       signed(annual(r.spAnnualPct), r.spAnnualPct || 0);
-      tr.insertCell().textContent = `${r.counts.buys + r.counts.sells}회 · ${r.counts.autoBuys}회`;
+      tr.insertCell().textContent = t('summary.twoCounts', { a: r.counts.buys + r.counts.sells, b: r.counts.autoBuys });
       tr.insertCell().textContent = Format.krwShort(Records.feeTotal(r));
       const cond = tr.insertCell();
       cond.className = 'wrap';
       const s = rec.settings;
-      const base = `초기 ${Format.krwShort(s.krw0)}, 월 ${Format.krwShort(s.monthlyKrw)}`;
-      cond.textContent = rec.rules.length ? `${base} · ${rec.rules.join(', ')}` : base;
+      const base = t('records.base', { krw0: Format.krwShort(s.krw0), monthly: Format.krwShort(s.monthlyKrw) });
+      const rules = Records.rulesOf(rec);
+      cond.textContent = rules.length ? `${base} · ${rules.join(', ')}` : base;
       const acts = tr.insertCell();
-      for (const [act, label] of [['view', '보기'], ['rename', '이름'], ['delete', '삭제']]) {
+      for (const [act, label] of [['view', t('records.view')], ['rename', t('records.rename')], ['delete', t('delete')]]) {
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'btn';
@@ -1029,12 +1049,13 @@
       return;
     }
     if (act === 'rename') {
-      const name = globalThis.prompt('기록 이름', rec.name);
-      if (!name || !name.trim()) return;
+      const shown = I18N.recordName(rec.name);
+      const name = globalThis.prompt(t('records.namePrompt'), shown);
+      if (!name || !name.trim() || name.trim() === shown) return;
       await Saves.putRecord({ ...rec, name: name.trim() });
     }
     if (act === 'delete') {
-      if (!globalThis.confirm(`${rec.name}을(를) 지울까요?`)) return;
+      if (!globalThis.confirm(t('records.deleteAsk', { name: I18N.recordName(rec.name) }))) return;
       await Saves.deleteRecord(rec.id);
     }
     drawRecords();
@@ -1059,10 +1080,10 @@
   const annualText = (v) => (v === null || v === undefined ? '-' : Format.pct(v));
 
   function barSection(c) {
-    const rows = c.ranked.map((r) => ({ name: r.name, value: r.report.annualPct, color: COLOR.mine, ref: false }));
+    const rows = c.ranked.map((r) => ({ name: I18N.recordName(r.name), value: r.report.annualPct, color: COLOR.mine, ref: false }));
     if (c.baseline) {
-      rows.push({ name: '코스피에 넣었다면', value: c.baseline.kospi, color: COLOR.kospi, ref: true });
-      rows.push({ name: 'S&P 500에 넣었다면', value: c.baseline.sp, color: COLOR.sp, ref: true });
+      rows.push({ name: t('chart.ifKospi'), value: c.baseline.kospi, color: COLOR.kospi, ref: true });
+      rows.push({ name: t('chart.ifSp'), value: c.baseline.sp, color: COLOR.sp, ref: true });
     }
     const top = Math.max(1, ...rows.map((r) => Math.abs(r.value || 0)));
     const wrap = el('div');
@@ -1103,14 +1124,14 @@
     const out = [];
     const [first, second] = c.ranked;
     if (first && first.rank) {
-      out.push(el('p', 'lead', `연환산 1위는 ${first.name}(${annualText(first.report.annualPct)})입니다.`
-        + (second && second.rank ? ` 2위 ${second.name}보다 연 ${Math.abs(second.gap).toFixed(1)}%p 높습니다.` : '')));
-      out.push(el('p', 'lead', `연환산을 계산한 ${c.measured}개 기록 중 코스피를 이긴 기록은 ${c.beatKospi}개, S&P 500을 이긴 기록은 ${c.beatSp}개입니다.`));
+      out.push(el('p', 'lead', t('cmp.first', { name: I18N.recordName(first.name), pct: annualText(first.report.annualPct) })
+        + (second && second.rank ? t('cmp.second', { name: I18N.recordName(second.name), gap: Math.abs(second.gap).toFixed(1) }) : '')));
+      out.push(el('p', 'lead', t('cmp.beat', { n: c.measured, kospi: c.beatKospi, sp: c.beatSp })));
     } else {
-      out.push(el('p', 'lead', '연환산을 계산할 수 있는 기록이 없습니다. 기간이 30일 이상이어야 합니다.'));
+      out.push(el('p', 'lead', t('cmp.noneMeasured')));
     }
-    if (!c.samePeriod) out.push(el('p', 'warnLine', '기간이 다른 기록이 섞여 있어 금액보다 연환산으로 비교하세요. 지수 기준선은 기간이 같을 때만 보여 줍니다.'));
-    else if (!c.sameMoney) out.push(el('p', 'warnLine', '넣은 돈이 달라 금액보다 %로 비교하세요. 지수 기준선은 넣은 돈이 같을 때만 보여 줍니다.'));
+    if (!c.samePeriod) out.push(el('p', 'warnLine', t('cmp.periodWarn')));
+    else if (!c.sameMoney) out.push(el('p', 'warnLine', t('cmp.moneyWarn')));
     return out;
   }
 
@@ -1123,16 +1144,16 @@
   function showCompare() {
     const chosen = shownRecords.filter((r) => !leftOut.has(r.id));
     if (chosen.length < 2) {
-      UI.setText($('recordsMsg'), '비교할 기록을 2개 이상 골라 주세요.');
+      UI.setText($('recordsMsg'), t('records.pickTwo'));
       return;
     }
     const c = Records.compare(chosen);
     const ranking = reportTable('rankTable',
-      ['순위', '이름', '연환산', '1위와 차이', '원금 대비', '손익', '최종 자산', '넣은 돈', '수수료', '코스피 연환산', 'S&P 500 연환산'],
+      ['rank', 'name', 'annual', 'gap', 'pct', 'pnl', 'total', 'contributed', 'fees', 'kospiAnnual', 'spAnnual'].map((k) => t(`col.${k}`)),
       c.ranked.map((r) => [
-        r.rank || '-', r.name,
+        r.rank || '-', I18N.recordName(r.name),
         { text: annualText(r.report.annualPct), value: r.report.annualPct },
-        r.gap === null ? '-' : r.gap === 0 ? '1위' : `${r.gap.toFixed(1).replace('-', '−')}%p`,
+        r.gap === null ? '-' : r.gap === 0 ? t('cmp.top') : t('cmp.gap', { gap: r.gap.toFixed(1).replace('-', '−') }),
         { text: Format.pct(r.report.pnlPct), value: r.report.pnlPct },
         { text: Format.krwSignedShort(r.report.pnl), value: r.report.pnl },
         Format.krwShort(r.report.total), Format.krwShort(r.report.contributed), Format.krwShort(Records.feeTotal(r.report)),
@@ -1141,31 +1162,32 @@
     const leaders = el('div', 'leaderList');
     for (const l of c.leaders) {
       const box = el('div');
-      box.append(el('small', '', l.label), el('b', '', l.name), document.createTextNode(` ${leaderValue(l)}`));
+      box.append(el('small', '', t(`lead.${l.key}`)), el('b', '', I18N.recordName(l.name)), document.createTextNode(` ${leaderValue(l)}`));
       leaders.append(box);
     }
-    const stockRows = c.stocks.map((s) => [s.name, ...c.ranked.map((r) => {
+    const stockRows = c.stocks.map((s) => [I18N.storedStockName(s.name), ...c.ranked.map((r) => {
       const cell = s.cells[r.id];
-      return cell ? { text: `${Format.pct(cell.pnlPct)} / 연 ${annualText(cell.annualPct)}`, value: cell.pnlPct } : '-';
+      return cell ? { text: t('cmp.cell', { pct: Format.pct(cell.pnlPct), annual: annualText(cell.annualPct) }), value: cell.pnlPct } : '-';
     })]);
     const conditions = el('div');
     for (const r of c.ranked) {
       const row = el('div', 'condRow');
       const s = r.settings;
-      const base = `초기 ${Format.krwShort(s.krw0)}${s.usd0 ? ` + ${Format.usd(s.usd0)}` : ''}, 월 ${Format.krwShort(s.monthlyKrw)}`;
-      const trades = `수동 ${r.report.counts.buys + r.report.counts.sells}회, 자동 ${r.report.counts.autoBuys}회`;
-      row.append(el('b', '', r.name), el('span', '', `${Format.date(r.report.startDate)} ~ ${Format.date(r.report.endDate)} · ${base} · ${trades}${r.rules.length ? ` · ${r.rules.join(', ')}` : ''}`));
+      const base = t('cmp.base', { krw0: Format.krwShort(s.krw0), usd: s.usd0 ? ` + ${Format.usd(s.usd0)}` : '', monthly: Format.krwShort(s.monthlyKrw) });
+      const trades = t('cmp.trades', { manual: r.report.counts.buys + r.report.counts.sells, auto: r.report.counts.autoBuys });
+      const period = t('range', { from: Format.date(r.report.startDate), to: Format.date(r.report.endDate) });
+      row.append(el('b', '', I18N.recordName(r.name)), el('span', '', `${period} · ${base} · ${trades}${r.rules.length ? ` · ${r.rules.join(', ')}` : ''}`));
       conditions.append(row);
     }
     $('compareBody').replaceChildren(
-      section('요약'), ...summaryLines(c),
-      section('연환산 비교'), barSection(c),
-      section('순위'), ranking,
-      section('항목별 1위'), leaders,
-      section('종목별 손익 (원금 대비 / 연환산)'),
-      c.stocks.length ? reportTable('stockCompare', ['종목', ...c.ranked.map((r) => r.name)], stockRows) : el('p', 'note', '거래한 종목이 없습니다.'),
-      section('조건'), conditions,
-      el('p', 'note', '연환산은 돈이 들어가고 나온 날짜를 반영한 연 수익률(XIRR)입니다. 달러 종목은 환율을 뺀 달러 기준이고, 지수는 배당을 뺀 가격지수입니다.'),
+      section(t('cmp.summary')), ...summaryLines(c),
+      section(t('cmp.bars')), barSection(c),
+      section(t('cmp.ranking')), ranking,
+      section(t('cmp.leaders')), leaders,
+      section(t('cmp.byStock')),
+      c.stocks.length ? reportTable('stockCompare', [t('col.stock'), ...c.ranked.map((r) => I18N.recordName(r.name))], stockRows) : el('p', 'note', t('cmp.noStocks')),
+      section(t('cmp.conditions')), conditions,
+      el('p', 'note', t('cmp.note')),
     );
     $('compare').hidden = false;
     $('compareBody').scrollTop = 0;
@@ -1176,7 +1198,7 @@
   // 다시 시작: 같은 조건과 자동투자로 게임 첫날부터.
   UI.restart = function () {
     if (UI.playing) UI.pause();
-    if (!globalThis.confirm('같은 조건과 자동투자로 첫날부터 다시 할까요?\n저장하지 않은 진행 내용은 사라집니다.')) return;
+    if (!globalThis.confirm(t('confirm.restart'))) return;
     $('summary').hidden = true;
     fileHandle = null;
     browserSlot = null;
@@ -1186,7 +1208,7 @@
   // 새로 시작: 설정 화면으로.
   UI.newStart = function () {
     if (UI.playing) UI.pause();
-    if (!globalThis.confirm('게임을 끝내고 설정 화면으로 돌아갈까요?\n저장하지 않은 내용과 자동투자 항목은 사라집니다.')) return;
+    if (!globalThis.confirm(t('confirm.newStart'))) return;
     $('summary').hidden = true;
     $('game').hidden = true;
     UI.state = null;
@@ -1205,7 +1227,7 @@
   function flashSave(text) {
     const btn = $('save');
     btn.textContent = text;
-    setTimeout(() => { btn.textContent = '저장'; }, 1500);
+    setTimeout(() => { btn.textContent = t('save'); }, 1500);
   }
 
   UI.save = async function () {
@@ -1219,9 +1241,9 @@
       } else {
         await saveInBrowser();
       }
-      flashSave('저장됨');
+      flashSave(t('saved'));
     } catch {
-      flashSave('저장 실패');
+      flashSave(t('saveFailed'));
     }
   };
 
@@ -1244,7 +1266,7 @@
       UI.setText($('loadMsg'), r.reason);
       return { ok: false, reason: r.reason };
     }
-    if (r.warn && !globalThis.confirm(`${r.warn}\n그래도 불러올까요?`)) {
+    if (r.warn && !globalThis.confirm(t('load.anyway', { warn: r.warn }))) {
       UI.setText($('loadMsg'), r.warn);
       return { ok: false, reason: r.warn };
     }
@@ -1256,7 +1278,7 @@
     } catch {
       fileHandle = previous.handle;
       browserSlot = previous.slot;
-      const reason = '세이브 파일의 내용이 잘못되었습니다';
+      const reason = t('load.badContent');
       if (previous.state) UI.loadState(previous.state);
       else { $('game').hidden = true; UI.state = null; $('start').hidden = false; }
       UI.setText($('loadMsg'), reason);
@@ -1271,7 +1293,7 @@
       const f = await Saves.openFile();
       if (f) UI.loadSaveText(f.text, f.handle);
     } catch {
-      UI.setText($('loadMsg'), '세이브 파일을 읽을 수 없습니다');
+      UI.setText($('loadMsg'), t('save.unreadable'));
     }
   }
 
@@ -1282,7 +1304,7 @@
     if (!rows.length) {
       const none = document.createElement('p');
       none.className = 'empty';
-      none.textContent = '최근 저장이 없습니다.';
+      none.textContent = t('start.noRecent');
       list.append(none);
       return;
     }
@@ -1294,10 +1316,10 @@
       btn.className = 'row';
       btn.dataset.act = 'open';
       const left = document.createElement('span');
-      left.textContent = row.inBrowser ? `${Format.date(row.gameDate)} 게임` : row.name;
+      left.textContent = row.inBrowser ? t('start.browserGame', { date: Format.date(row.gameDate) }) : row.name;
       const when = document.createElement('small');
       when.style.display = 'block';
-      when.textContent = `${Format.date(row.gameDate)} · ${Format.date(row.savedAt.slice(0, 10))} 저장`;
+      when.textContent = t('start.savedOn', { date: Format.date(row.gameDate), saved: Format.date(row.savedAt.slice(0, 10)) });
       left.append(when);
       const right = document.createElement('span');
       right.className = 'num';
@@ -1313,7 +1335,7 @@
           const f = await Saves.readRecent(row);
           if (f) UI.loadSaveText(f.text, f.handle, f.slot || null);
         } catch {
-          UI.setText($('loadMsg'), '파일을 찾을 수 없습니다. 옮겼다면 "세이브 파일 불러오기"로 열어 주세요.');
+          UI.setText($('loadMsg'), t('start.fileMissing'));
         }
       });
       line.append(btn);
@@ -1322,9 +1344,9 @@
         del.type = 'button';
         del.className = 'btn';
         del.dataset.act = 'delete';
-        del.textContent = '삭제';
+        del.textContent = t('delete');
         del.addEventListener('click', async () => {
-          if (globalThis.confirm && !globalThis.confirm('이 저장을 지울까요?')) return;
+          if (globalThis.confirm && !globalThis.confirm(t('start.deleteSave'))) return;
           await Saves.deleteRecent(row.name);
           drawRecent();
         });
@@ -1347,17 +1369,17 @@
       tradeFeePct: num('sTrade'),
       sellTaxPct: num('sTax'),
     };
-    if (!(settings.krw0 >= 0)) return { error: '초기 자금(원화)은 0 이상의 숫자여야 합니다' };
-    if (!(settings.usd0 >= 0)) return { error: '초기 자금(달러)은 0 이상의 숫자여야 합니다' };
-    if (!(settings.monthlyKrw >= 0)) return { error: '월 추가 투자금은 0 이상의 숫자여야 합니다' };
-    if (settings.krw0 + settings.usd0 + settings.monthlyKrw <= 0) return { error: '초기 자금이나 월 추가 투자금 중 하나는 있어야 합니다' };
-    for (const [key, name] of [['fxFeePct', '환전 수수료'], ['tradeFeePct', '매매 수수료'], ['sellTaxPct', '거래세']]) {
-      if (!(settings[key] >= 0 && settings[key] < 100)) return { error: `${name}는 0 이상 100 미만이어야 합니다` };
+    if (!(settings.krw0 >= 0)) return { error: t('err.krw0') };
+    if (!(settings.usd0 >= 0)) return { error: t('err.usd0') };
+    if (!(settings.monthlyKrw >= 0)) return { error: t('err.monthly') };
+    if (settings.krw0 + settings.usd0 + settings.monthlyKrw <= 0) return { error: t('err.noMoney') };
+    for (const [key, name] of [['fxFeePct', 'err.fxFee'], ['tradeFeePct', 'err.tradeFee'], ['sellTaxPct', 'err.tax']]) {
+      if (!(settings[key] >= 0 && settings[key] < 100)) return { error: t('err.pctRange', { name: t(name) }) };
     }
     const first = data.dates[0];
     const last = data.dates[data.dates.length - 2];
     if (!settings.startDate || settings.startDate < first || settings.startDate > last) {
-      return { error: `시작일은 ${Format.date(first)}부터 ${Format.date(last)} 사이여야 합니다` };
+      return { error: t('err.startDate', { first: Format.date(first), last: Format.date(last) }) };
     }
     return { settings };
   }
@@ -1489,8 +1511,18 @@
     new ResizeObserver(() => { if (UI.state && !$('game').hidden) drawChart(); }).observe($('chartbox'));
   }
 
+  // 언어는 시작 화면에서만 바꾼다. 진행 중인 게임이 없으니 새로고침으로 모든 문구를 다시 그린다.
+  function wireLanguage() {
+    I18N.mountPicker($('langPick'), (code) => {
+      if (UI.state) return;
+      I18N.setLang(code);
+    });
+  }
+
+  I18N.applyStatic();
   buildStockList();
   wire();
+  wireLanguage();
   showStart();
   globalThis.UI = UI;
 })();

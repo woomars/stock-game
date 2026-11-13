@@ -3,26 +3,42 @@
   const load = (name, file) => globalThis[name] || (typeof require !== 'undefined' ? require(file) : null);
   const Engine = load('Engine', './engine.js');
   const Format = load('Format', './format.js');
-  const FREQ_NAME = { day: '매일', week: '매주', month: '매월', year: '매년' };
+  const I18N = load('I18N', './i18n.js');
 
-  function ruleTexts(data, state) {
+  // 자동투자와 매도 규칙의 뼈대. 보고서를 볼 때 그때 언어로 문장을 다시 만든다.
+  function ruleSpecs(data, state) {
     const auto = state.autoRules.map((r) => {
       const s = data.stocks[r.stockIdx];
-      return `${s.name} ${FREQ_NAME[r.freq]} ${Format.money(r.amount, s.currency)}`;
+      return { kind: 'auto', id: s.id, name: s.name, freq: r.freq, amount: r.amount, currency: s.currency };
     });
     const sell = (state.sellRules || []).map((r) => {
-      const sign = r.pct > 0 ? '+' : r.pct < 0 ? '−' : '';
-      return `${data.stocks[r.stockIdx].name} ${sign}${Math.abs(r.pct)}% ${r.op === 'gte' ? '이상' : '이하'} ${r.sellPct}% 매도`;
+      const s = data.stocks[r.stockIdx];
+      return { kind: 'sell', id: s.id, name: s.name, op: r.op, pct: r.pct, sellPct: r.sellPct };
     });
     return [...auto, ...sell];
   }
+
+  function ruleText(spec) {
+    const name = I18N.storedStockName(spec.name);
+    if (spec.kind === 'auto') {
+      return I18N.t('rules.auto', { name, freq: I18N.t(`freq.${spec.freq}`), money: Format.money(spec.amount, spec.currency) });
+    }
+    return I18N.t('rules.sell', { name, op: spec.op, pct: Format.signedPct(spec.pct), sellPct: spec.sellPct });
+  }
+
+  function ruleTexts(data, state) { return ruleSpecs(data, state).map(ruleText); }
+
+  // 기록의 규칙 문장. 뼈대가 없는 옛 기록은 남은 문장을 그대로 쓴다.
+  function rulesOf(record) { return record.ruleSpecs ? record.ruleSpecs.map(ruleText) : (record.rules || []); }
 
   function make(data, state, { id, name, createdAt }) {
     const report = Engine.report(data, state);
     report.stocks = report.stocks.map((r) => ({
       ...r, name: data.stocks[r.stockIdx].name, currency: data.stocks[r.stockIdx].currency,
     }));
-    return { id, name, createdAt, dataVersion: data.version, settings: { ...state.settings }, rules: ruleTexts(data, state), report };
+    return {
+      id, name, createdAt, dataVersion: data.version, settings: { ...state.settings }, rules: ruleTexts(data, state), ruleSpecs: ruleSpecs(data, state), report,
+    };
   }
 
   function nextName(records) {
@@ -47,7 +63,7 @@
     const sorted = [...known].sort((a, b) => b.report.annualPct - a.report.annualPct)
       .concat(records.filter((r) => r.report.annualPct === null));
     const ranked = sorted.map((r, i) => ({
-      id: r.id, name: r.name, rules: r.rules, settings: r.settings, report: r.report,
+      id: r.id, name: r.name, rules: rulesOf(r), settings: r.settings, report: r.report,
       rank: r.report.annualPct === null ? null : i + 1,
       gap: r.report.annualPct === null ? null : r.report.annualPct - top,
     }));
@@ -93,7 +109,7 @@
     };
   }
 
-  const Records = { make, nextName, bestId, feeTotal, compare };
+  const Records = { make, nextName, bestId, feeTotal, compare, rulesOf };
   globalThis.Records = Records;
   if (typeof module !== 'undefined') module.exports = Records;
 })();

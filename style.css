@@ -9,8 +9,10 @@
 html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1.4; min-width: 760px;
-  font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+  font-family: "Pretendard", "Malgun Gothic", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", system-ui, sans-serif; font-variant-numeric: tabular-nums;
 }
+/* 일본어는 한자가 일본 글자꼴로 나오도록 일본어 글꼴을 먼저 쓴다 */
+html:lang(ja) body { font-family: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans JP", "Pretendard", "Malgun Gothic", system-ui, sans-serif; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: .55; }
@@ -121,6 +123,13 @@ small.up { color: var(--up); } small.down { color: var(--down); }
 #start { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .setup { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding: 24px; background: var(--panel); border-radius: 10px; width: 960px; }
 .setup h1 { grid-column: 1 / -1; margin: 0; font-size: 20px; }
+.setupHead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+/* 언어 고르기: 시작 화면 구석의 작은 국기 버튼 3개. 고른 언어만 또렷하게 */
+.langPick { display: flex; gap: 4px; }
+.langPick button { display: flex; align-items: center; justify-content: center; width: 36px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; opacity: .5; }
+.langPick button:hover { opacity: .8; }
+.langPick button[aria-pressed="true"] { opacity: 1; border-color: #6b7582; background: var(--raise); cursor: default; }
+.langPick svg { display: block; width: 22px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); }
 .setup h4 { margin: 0 0 12px; font-size: 17px; }
 .setup .field { padding: 8px 10px; }
 .setup .go.primary { background: #d9463e; color: #fff; margin-top: 8px; }
@@ -273,6 +282,8 @@ small.up { color: var(--up); } small.down { color: var(--down); }
   #game[data-focus="trade"] .left { flex: 0 0 46px; background: var(--fold); border-bottom-color: var(--fold-line); }
   #game[data-focus="trade"] .right { flex: 100 1 0; }
   #game[data-focus="trade"] .crumb::after { content: "그래프 ▾"; flex: none; margin-left: auto; color: var(--fold-ink); font-size: 12px; font-weight: 400; }
+  html:lang(en) #game[data-focus="trade"] .crumb::after { content: "Chart ▾"; }
+  html:lang(ja) #game[data-focus="trade"] .crumb::after { content: "グラフ ▾"; }
   #game[data-focus="trade"] .crumb { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; min-height: 32px; }
   #game[data-focus="trade"] .crumb button, #game[data-focus="trade"] .legend { display: none; }
   #game[data-focus="trade"] .chartbox { visibility: hidden; }

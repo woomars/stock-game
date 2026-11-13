@@ -3,6 +3,8 @@
   const data = globalThis.GAME_DATA;
   const $ = (id) => document.getElementById(id);
   const { parseNumber, setText } = UI;
+  const { t } = I18N;
+  const nameOf = (stock) => I18N.stockName(stock);
 
   // 현재 값이 입력 중인 숫자와 같으면 커서가 튀지 않게 건드리지 않는다.
   function listRow(title, sub, right, button) {
@@ -71,18 +73,18 @@
     change.className = UI.signClass(pct);
     change.textContent = Format.pct(pct);
     big.append(change);
-    setText($('fxBal'), `달러 계좌 ${Format.usd(s.usd)} · 원화 계좌 ${Format.krw(s.krw)}`);
+    setText($('fxBal'), t('fx.balance', { usd: Format.usd(s.usd), krw: Format.krw(s.krw) }));
 
     const buying = fxDir === 'KRW_TO_USD';
-    setText($('fxUsdLabel'), buying ? '받을 달러' : '팔 달러');
-    setText($('fxRateLabel'), `수수료 ${s.settings.fxFeePct}% 적용 환율`);
-    setText($('fxKrwLabel'), buying ? '나가는 원화' : '들어오는 원화');
+    setText($('fxUsdLabel'), buying ? t('fx.receiveUsd') : t('fx.sellUsd'));
+    setText($('fxRateLabel'), t('fx.rateLabel', { fee: s.settings.fxFeePct }));
+    setText($('fxKrwLabel'), buying ? t('fx.krwOut') : t('fx.krwIn'));
     const usd = parseNumber($('fxUsd').value);
     if (Number.isFinite(usd) && usd > 0) {
       const q = Engine.fxQuote(data, s, fxDir, usd);
       setText($('fxRate'), Format.rate(q.rate));
       setText($('fxKrw'), Format.krw(q.krw));
-      setText($('fxFee'), `이 중 수수료는 ${Format.krw(q.feeKrw)}원입니다.`);
+      setText($('fxFee'), t('fx.fee', { fee: Format.krw(q.feeKrw) }));
     } else {
       setText($('fxRate'), Format.rate(buying ? spot * (1 + s.settings.fxFeePct / 100) : spot * (1 - s.settings.fxFeePct / 100)));
       setText($('fxKrw'), '-');
@@ -90,20 +92,21 @@
     }
 
     const orders = s.fxOrders;
-    setText($('foTitle'), `조건 환전 예약 ${orders.length}건`);
+    setText($('foTitle'), t('fo.title', { n: orders.length }));
+    const rateText = (v) => (I18N.lang === 'ko' ? Math.round(v).toLocaleString('en-US') : Format.rateWhole(v));
     fillList($('foList'), JSON.stringify(orders) + UI.playing, () => orders.map((o) => listRow(
-      `${Math.round(o.rate).toLocaleString('en-US')}원 ${o.op === 'lte' ? '이하' : '이상'}일 때`,
+      t(o.op === 'lte' ? 'fo.whenLte' : 'fo.whenGte', { rate: rateText(o.rate) }),
       `${Format.DIR_NAME[o.dir]} ${Format.usd(o.usd)}`,
       null,
-      { label: '취소', id: o.id },
-    )), '예약이 없습니다.');
-    setText($('foRateLabel'), foDir === 'KRW_TO_USD' ? '환율이 이 값 이하일 때' : '환율이 이 값 이상일 때');
+      { label: t('cancel'), id: o.id },
+    )), t('fo.empty'));
+    setText($('foRateLabel'), foDir === 'KRW_TO_USD' ? t('fo.rateLte') : t('fo.rateGte'));
   }
 
   function doExchange() {
     if (UI.playing) return;
     const r = Engine.exchange(data, UI.state, fxDir, parseNumber($('fxUsd').value));
-    setText($('fxMsg'), r.ok ? '' : r.reason);
+    setText($('fxMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) UI.refresh();
   }
 
@@ -115,7 +118,7 @@
       dir: foDir,
       usd: parseNumber($('foUsd').value),
     });
-    setText($('foMsg'), r.ok ? '' : r.reason);
+    setText($('foMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) UI.refresh();
   }
 
@@ -125,37 +128,36 @@
 
   function drawBond() {
     const s = UI.state;
-    setText($('bKr'), `한국 국고채 ${data.rates.KR[s.dayIdx].toFixed(2)}%`);
-    setText($('bUs'), `미국 국채 ${data.rates.US[s.dayIdx].toFixed(2)}%`);
+    setText($('bKr'), `${t('bond.KR')} ${data.rates.KR[s.dayIdx].toFixed(2)}%`);
+    setText($('bUs'), `${t('bond.US')} ${data.rates.US[s.dayIdx].toFixed(2)}%`);
     const currency = bondCountry === 'US' ? 'USD' : 'KRW';
-    setText($('bAmtLabel'), currency === 'USD' ? '넣을 금액 (달러)' : '넣을 금액 (원)');
+    setText($('bAmtLabel'), currency === 'USD' ? t('bond.amountUsd') : t('bond.amountKrw'));
     const amount = parseNumber($('bAmt').value);
     if (Number.isFinite(amount) && amount > 0) {
       const q = Engine.bondQuote(data, s, bondCountry, amount);
-      setText($('bPayLabel'), `${Format.date(q.maturityDate)} 만기 수령액`);
+      setText($('bPayLabel'), t('bond.payLabel', { date: Format.date(q.maturityDate) }));
       setText($('bPay'), Format.money(q.payout, currency));
     } else {
       setText($('bPay'), '-');
     }
-    setText($('bTitle'), `보유 채권 ${s.bonds.length}건`);
+    setText($('bTitle'), t('bond.title', { n: s.bonds.length }));
     fillList($('bList'), JSON.stringify(s.bonds), () => s.bonds.map((b) => listRow(
       `${Format.BOND_NAME[b.country]} ${Format.money(b.principal, b.currency)}`,
-      `금리 ${b.ratePct.toFixed(2)}% · 만기 ${Format.date(b.maturityDate)}`,
-      [`+${Format.money(Engine.roundMoney(b.payout - b.principal, b.currency), b.currency)}`, '만기 이자'],
-    )), '보유 채권이 없습니다.');
+      t('bond.sub', { rate: b.ratePct.toFixed(2), date: Format.date(b.maturityDate) }),
+      [`+${Format.money(Engine.roundMoney(b.payout - b.principal, b.currency), b.currency)}`, t('bond.interest')],
+    )), t('bond.empty'));
   }
 
   function doBuyBond() {
     if (UI.playing) return;
     const r = Engine.buyBond(data, UI.state, bondCountry, parseNumber($('bAmt').value));
-    setText($('bMsg'), r.ok ? '' : r.reason);
+    setText($('bMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) UI.refresh();
   }
 
   // ---------- 자동투자 ----------
 
   let autoFreq = 'month';
-  const FREQ_NAME = { day: '매일', week: '매주', month: '매월', year: '매년' };
 
   let editingId = null;
 
@@ -166,8 +168,8 @@
 
   function cancelEdit() {
     editingId = null;
-    setText($('aGo'), '자동투자 추가');
-    setText($('aFormTitle'), '새 자동투자');
+    setText($('aGo'), t('auto.add'));
+    setText($('aFormTitle'), t('auto.new'));
     $('aCancel').hidden = true;
     setText($('aMsg'), '');
   }
@@ -177,8 +179,8 @@
     $('aStock').value = rule.stockIdx;
     setFreq(rule.freq);
     $('aAmt').value = rule.amount.toLocaleString('en-US');
-    setText($('aGo'), '수정 저장');
-    setText($('aFormTitle'), '자동투자 편집');
+    setText($('aGo'), t('saveEdit'));
+    setText($('aFormTitle'), t('auto.edit'));
     $('aCancel').hidden = false;
     setText($('aMsg'), '');
   }
@@ -191,13 +193,13 @@
     row.className = `autoRow${rule.paused ? ' stopped' : ''}${rule.id === editingId ? ' editing' : ''}`;
     const name = document.createElement('div');
     name.className = 'autoName';
-    name.textContent = st.name;
+    name.textContent = nameOf(st);
     const sub = document.createElement('small');
-    const when = rule.paused ? '정지됨' : `다음 ${next ? Format.date(next) : '없음'}`;
-    sub.textContent = `${FREQ_NAME[rule.freq]} ${Format.money(rule.amount, st.currency)} · ${when}`;
+    const when = rule.paused ? t('auto.paused') : t('auto.next', { date: next ? Format.date(next) : t('auto.none') });
+    sub.textContent = `${t(`freq.${rule.freq}`)} ${Format.money(rule.amount, st.currency)} · ${when}`;
     const btns = document.createElement('div');
     btns.className = 'autoBtns';
-    for (const [act, label] of [['pause', rule.paused ? '다시 시작' : '정지'], ['edit', '편집'], ['delete', '삭제']]) {
+    for (const [act, label] of [['pause', rule.paused ? t('resume') : t('stop')], ['edit', t('edit')], ['delete', t('delete')]]) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn lockable';
@@ -214,19 +216,19 @@
   function drawAuto() {
     const s = UI.state;
     const stock = data.stocks[Number($('aStock').value)];
-    setText($('aAmtLabel'), stock.currency === 'USD' ? '회차당 금액 (달러)' : '회차당 금액 (원)');
+    setText($('aAmtLabel'), stock.currency === 'USD' ? t('auto.amountUsd') : t('auto.amountKrw'));
     const listing = Engine.listingIdx(data, Number($('aStock').value));
-    setText($('aListing'), listing > s.dayIdx ? `아직 상장 전입니다. ${Format.date(data.dates[listing])} 상장일부터 자동투자가 시작됩니다.` : '');
-    setText($('aTitle'), `작동 중 ${s.autoRules.length}건`);
+    setText($('aListing'), listing > s.dayIdx ? t('auto.notListed', { date: Format.date(data.dates[listing]) }) : '');
+    setText($('aTitle'), t('auto.title', { n: s.autoRules.length }));
     const sig = JSON.stringify(s.autoRules) + s.dayIdx + UI.playing + editingId;
-    fillList($('aList'), sig, () => s.autoRules.map(autoRow), '자동투자가 없습니다.');
+    fillList($('aList'), sig, () => s.autoRules.map(autoRow), t('auto.empty'));
   }
 
   function doAddAuto() {
     if (UI.playing) return;
     const rule = { stockIdx: Number($('aStock').value), freq: autoFreq, amount: parseNumber($('aAmt').value) };
     const r = editingId === null ? Engine.addAutoRule(UI.state, rule) : Engine.editAutoRule(UI.state, editingId, rule);
-    setText($('aMsg'), r.ok ? '' : r.reason);
+    setText($('aMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) {
       cancelEdit();
       UI.refresh();
@@ -260,8 +262,8 @@
 
   function cancelSellEdit() {
     editingSellId = null;
-    setText($('rGo'), '매도 규칙 추가');
-    setText($('rFormTitle'), '새 매도 규칙');
+    setText($('rGo'), t('rule.add'));
+    setText($('rFormTitle'), t('rule.new'));
     $('rCancel').hidden = true;
     setText($('rMsg'), '');
   }
@@ -274,8 +276,8 @@
     $('rQty').value = String(rule.sellPct);
     $('rTimes').value = String(rule.times || 1);
     $('rWait').value = String(rule.waitDays || 0);
-    setText($('rGo'), '수정 저장');
-    setText($('rFormTitle'), '매도 규칙 편집');
+    setText($('rGo'), t('saveEdit'));
+    setText($('rFormTitle'), t('rule.edit'));
     $('rCancel').hidden = false;
     setText($('rMsg'), '');
   }
@@ -286,17 +288,16 @@
     row.className = `autoRow${stopped ? ' stopped' : ''}${rule.id === editingSellId ? ' editing' : ''}`;
     const name = document.createElement('div');
     name.className = 'autoName';
-    name.textContent = data.stocks[rule.stockIdx].name;
+    name.textContent = nameOf(data.stocks[rule.stockIdx]);
     const sub = document.createElement('small');
-    const sign = rule.pct > 0 ? '+' : rule.pct < 0 ? '−' : '';
-    const status = rule.firedDate ? `실행됨 ${Format.date(rule.firedDate)}` : rule.paused ? '정지됨' : '대기 중';
+    const status = rule.firedDate ? t('rule.fired', { date: Format.date(rule.firedDate) }) : rule.paused ? t('auto.paused') : t('rule.waiting');
     const times = rule.times || 1;
     const repeat = times > 1 || rule.waitDays
-      ? ` · ${times}회 · 대기 ${rule.waitDays || 0}일${rule.firedDate ? '' : ` · ${rule.firedCount || 0}/${times}회 실행`}` : '';
-    sub.textContent = `수익률 ${sign}${Math.abs(rule.pct)}% ${rule.op === 'gte' ? '이상' : '이하'}이면 ${rule.sellPct}% 매도${repeat} · ${status}`;
+      ? t('rule.repeat', { times, wait: rule.waitDays || 0, fired: rule.firedDate ? null : (rule.firedCount || 0) }) : '';
+    sub.textContent = t('rule.line', { pct: Format.signedPct(rule.pct), op: rule.op, sellPct: rule.sellPct, repeat, status });
     const btns = document.createElement('div');
     btns.className = 'autoBtns';
-    for (const [act, label] of [['pause', stopped ? '다시 시작' : '정지'], ['edit', '편집'], ['delete', '삭제']]) {
+    for (const [act, label] of [['pause', stopped ? t('resume') : t('stop')], ['edit', t('edit')], ['delete', t('delete')]]) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn lockable';
@@ -312,9 +313,9 @@
 
   function drawSell() {
     const rules = UI.state.sellRules || [];
-    setText($('rTitle'), `매도 규칙 ${rules.length}건`);
+    setText($('rTitle'), t('rule.title', { n: rules.length }));
     const sig = JSON.stringify(rules) + UI.playing + editingSellId;
-    fillList($('rList'), sig, () => rules.map(sellRow), '매도 규칙이 없습니다.');
+    fillList($('rList'), sig, () => rules.map(sellRow), t('rule.empty'));
   }
 
   function doAddSell() {
@@ -328,7 +329,7 @@
       waitDays: parseNumber($('rWait').value),
     };
     const r = editingSellId === null ? Engine.addSellRule(UI.state, rule) : Engine.editSellRule(UI.state, editingSellId, rule);
-    setText($('rMsg'), r.ok ? '' : r.reason);
+    setText($('rMsg'), r.ok ? '' : I18N.msg(r.reason));
     if (r.ok) {
       cancelSellEdit();
       UI.refresh();
@@ -355,14 +356,14 @@
   function wire() {
     const aStock = $('aStock');
     for (const select of [aStock, $('rStock')]) {
-      for (const [board, label] of [['KOSPI', '코스피'], ['KOSDAQ', '코스닥'], ['US', '미국']]) {
+      for (const board of ['KOSPI', 'KOSDAQ', 'US']) {
         const group = document.createElement('optgroup');
-        group.label = label;
+        group.label = t(`board.${board}`);
         data.stocks.forEach((stock, i) => {
           if (stock.board !== board) return;
           const option = document.createElement('option');
           option.value = i;
-          option.textContent = stock.name;
+          option.textContent = nameOf(stock);
           group.append(option);
         });
         select.append(group);
