@@ -130,6 +130,8 @@ small.up { color: var(--up); } small.down { color: var(--down); }
 .langPick button:hover { opacity: .8; }
 .langPick button[aria-pressed="true"] { opacity: 1; border-color: #6b7582; background: var(--raise); cursor: default; }
 .langPick svg { display: block; width: 22px; height: 15px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); }
+/* 아이폰일 때만 보이는 작은 「문제 신고」 버튼(시작 화면 오른쪽 아래 구석) */
+.iosReport { display: block; margin: 10px 0 0 auto; padding: 5px 10px; border: 1px solid #4a525e; border-radius: 6px; background: none; color: var(--ink2); font-size: 12px; }
 .setup h4 { margin: 0 0 12px; font-size: 17px; }
 .setup .field { padding: 8px 10px; }
 .setup .go.primary { background: #d9463e; color: #fff; margin-top: 8px; }

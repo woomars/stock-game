@@ -1,0 +1,31 @@
+MIT License
+
+Copyright (c) 2026 woomars
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+적용 범위
+
+위 MIT 라이선스는 이 프로젝트에서 직접 작성한 코드와 직접 만든 홈 화면 아이콘(game/icons/)에만 적용되고, 데이터 파일에는 적용되지 않습니다. 다른 곳에서 받은 자료 — 시세와 금리 데이터(Yahoo Finance, 네이버 금융, 미국 재무부, 한국은행 ECOS) — 는 README에 적은 출처와 각 제공처의 권리·약관을 따릅니다.
+
+Scope
+
+The MIT License above applies only to the code written for this project and to the home-screen icon made for it (game/icons/), not to the data files. Material from elsewhere — the price and interest-rate data (Yahoo Finance, Naver Finance, U.S. Treasury, Bank of Korea ECOS) — remains subject to each provider's rights and terms, as listed in the README.

@@ -1400,6 +1400,18 @@
     $('sDate').max = data.dates[data.dates.length - 2];
     $('start').hidden = false;
     drawRecent();
+    renderIOSReport();
+  }
+
+  // 아이폰일 때만 시작 화면 오른쪽 아래 구석의 작은 「문제 신고」 버튼(허브 공통 ios.js 의 WoomarsIOS, 글자는 지금 언어).
+  // ios.js 는 defer 라 이 스크립트보다 늦게 온다 → woomars-ios-ready 때 다시 그린다. 없거나 실패하면 숨긴 채.
+  // 언어를 바꾸면 새로고침되므로 글자도 그때 새로 정해진다.
+  function renderIOSReport() {
+    const b = $('iosReport');
+    const ios = globalThis.WoomarsIOS;
+    if (!b) return;
+    b.hidden = !(ios && ios.isIOS);
+    if (!b.hidden) b.textContent = ios.reportLabel();
   }
 
   // 핸드폰에는 기록 칸을 둘 자리가 없어 '내역' 탭 안으로 옮긴다. style.css의 핸드폰 조건과 같다.
@@ -1513,6 +1525,8 @@
 
   // 언어는 시작 화면에서만 바꾼다. 진행 중인 게임이 없으니 새로고침으로 모든 문구를 다시 그린다.
   function wireLanguage() {
+    $('iosReport').addEventListener('click', () => { if (globalThis.WoomarsIOS) globalThis.WoomarsIOS.report(); });
+    globalThis.addEventListener('woomars-ios-ready', renderIOSReport);
     I18N.mountPicker($('langPick'), (code) => {
       if (UI.state) return;
       I18N.setLang(code);
